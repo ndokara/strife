@@ -5,9 +5,18 @@ import routes from './routes';
 import authRoutes from './routes/auth';
 import { connectDb } from './db/db';
 
+const cors = require('cors');
 const app = express();
 
 connectDb();
+
+const corsOptions = {
+    origin: "http://localhost:5173",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    credentials: true, // Allow cookies if using sessions
+    allowedHeaders: "Content-Type,Authorization",
+};
+app.use(cors(corsOptions));
 
 app.use(morgan('dev'));
 app.use(express.json());
