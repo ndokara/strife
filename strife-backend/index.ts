@@ -1,11 +1,11 @@
 import express from 'express';
+import cors from 'cors';
 import morgan from 'morgan';
 import cookieParser from "cookie-parser";
 import routes from './routes';
 import authRoutes from './routes/auth';
 import { connectDb } from './db/db';
 
-const cors = require('cors');
 const app = express();
 
 connectDb();
