@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavigateFunction, useNavigate } from "react-router";
-import axios, { AxiosResponse } from "axios";
+import { userApi } from "@/api/parts/user.ts";
+import { isApiError } from "@/api/core.ts";
+import { authApi } from "@/api/parts/auth.ts";
+import { HttpStatusCode } from "@/api/http.ts";
 
-const API_URL: string = "http://localhost:3000/api";
 
 interface User {
     id: string;
@@ -12,23 +14,18 @@ interface User {
     dateOfBirth: Date;
 }
 
-export const Profile: React.FC = () => {
+const Profile: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [error, setError] = useState<string | null>(null);
     const navigate: NavigateFunction = useNavigate();
 
-    useEffect((): void => {
+    useEffect(() => {
         const fetchProfile = async (): Promise<void> => {
             try {
-                //response, logicno je tip AxiosResponse<User> a ne AxiosResponse<any> ili sl
-                const response: AxiosResponse<User> = await axios.get(`${API_URL}/profile`, {
-                    withCredentials: true
-                });
-
-                // dateOfBirth convertam prvo u validan Date objekat
-                setUser({ ...response.data, dateOfBirth: new Date(response.data.dateOfBirth) });
+                const user = await userApi.getProfile();
+                setUser(user);
             } catch (err: unknown) {
-                if (axios.isAxiosError(err) && err.response?.status === 401) {
+                if (isApiError(err) && err.response?.status === HttpStatusCode.UNAUTHORIZED) {
                     setError("Unauthorized. Please log in.");
                 } else {
                     setError("An unexpected error occurred.");
@@ -37,12 +34,13 @@ export const Profile: React.FC = () => {
                 navigate("/login");
             }
         };
+
         fetchProfile();
     }, [navigate]);
 
     const handleLogout = async () => {
         try {
-            await axios.post(`${API_URL}/logout`, {}, { withCredentials: true });
+            await authApi.logout();
             setUser(null);
             navigate("/login");
         } catch (err: unknown) {
@@ -68,3 +66,4 @@ export const Profile: React.FC = () => {
         </div>
     );
 };
+export default Profile;

@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import cookieParser from "cookie-parser";
 import routes from './routes';
 import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
 import { connectDb } from './db/db';
 
 const app = express();
@@ -13,7 +14,7 @@ connectDb();
 const corsOptions = {
     origin: "http://localhost:5173",
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    credentials: true, // Allow cookies if using sessions
+    credentials: true,
     allowedHeaders: "Content-Type,Authorization",
 };
 app.use(cors(corsOptions));
@@ -27,12 +28,13 @@ routes(app);
 
 
 //rute
-app.use('/api/', authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+    console.log(`Server running at http://localhost:${port}`);
 });
 
 module.exports = app;
