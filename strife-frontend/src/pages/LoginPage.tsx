@@ -47,7 +47,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
             try {
                 const { accessToken } = await authApi.login(username, password);
                 localStorage.setItem('accessToken', accessToken);
-                navigate('/profile');
+                navigate('/dashboard/myaccount');
             } catch (error) {
                 console.error('Login failed: ', error);
             }

@@ -12,7 +12,8 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
         if (existingUser) {
             return res.status(400).json({ message: "Email or username already in use" });
         }
-        const user: IUser = new User({ email, displayName, username, password, dateOfBirth });
+        const defaultAvatarUrl: string = `${process.env.MINIO_ENDPOINT}/avatars/avatar-default.jpg`
+        const user: IUser = new User({ email, displayName, username, password, dateOfBirth, avatarUrl:defaultAvatarUrl});
         await user.save();
 
         const token = createSecretToken(user.id.toString());
@@ -67,8 +68,6 @@ router.post('/logout', (req: Request, res: Response, next: NextFunction): void =
 router.post('/check-existing-credentials', async (req: Request, res: Response): Promise<void> => {
     try {
         const { email, username } = req.body;
-
-        // Run both queries concurrently, selecting only the `_id` field for efficiency
         const [emailExists, usernameExists] = await Promise.all([
             User.exists({ email }).then(Boolean),
             User.exists({ username }).then(Boolean),
