@@ -71,6 +71,21 @@ class UserApi extends BackendApi {
             throw new Error('unknown_error');
         }
     }
+    async updatePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+        try {
+            const res: AxiosResponse = await this.backend.put('update-password', {
+                currentPassword,
+                newPassword,
+            });
+            return res.data;
+        } catch (err: unknown) {
+            if (err instanceof AxiosError) {
+                const apiError: { error?: string } = err.response?.data as { error?: string };
+                throw new Error(apiError?.error || 'unknown_error');
+            }
+            throw new Error('unknown_error');
+        }
+    }
 
 }
 

@@ -109,8 +109,7 @@ export default function UpdateUsername({ open, handleClose }: UpdateUsernameProp
                 sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}
             >
                 <DialogContentText>
-                    Enter your account&apos;s email address, and we&apos;ll send you a link to
-                    reset your password.
+                    Enter your new username.
                 </DialogContentText>
 
                 <FormControl fullWidth variant="outlined" error={passwordError}>

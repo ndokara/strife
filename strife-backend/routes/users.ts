@@ -5,9 +5,9 @@ import router from "./auth";
 import uploadAvatar from "../middleware/uploadAvatar";
 import { fileTypeFromBuffer, FileTypeResult } from 'file-type'
 import bcrypt from "bcrypt";
+import s3 from '../db/minioClient';
 import sharp = require('sharp');
 import crypto = require('crypto');
-import s3 from '../db/minioClient';
 
 router.get('/profile', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -175,6 +175,28 @@ router.put('/update-username', verifyToken, async (req: Request, res: Response):
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: "server_error", message: "Something went wrong." });
+    }
+});
+router.put('/update-password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+    try {
+        const authReq: AuthRequest = req as AuthRequest;
+        if (!authReq.user) {
+            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
+        }
+        const { currentPassword, newPassword } = req.body;
+        const user: IUser | null = await User.findById(authReq.user.id!);
+        if (!user) {
+            return res.status(404).json({ error: "user_not_found", message: "User not found." });
+        }
+        const passwordValid: boolean = await bcrypt.compare(currentPassword, user.password);
+        if (!passwordValid) {
+            return res.status(403).json({ error: "invalid_password", message: "Incorrect password." });
+        }
+        user.password = newPassword;
+        await user.save();
+        res.status(200).json({ message: "Password updated successfully." });
+    } catch (dbError) {
+        return next(dbError);
     }
 });
 

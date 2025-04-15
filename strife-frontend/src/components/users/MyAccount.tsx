@@ -12,6 +12,7 @@ import UpdateDisplayName from "@/components/users/UpdateDisplayNameDialog.tsx";
 import UpdateEmail from "@/components/users/UpdateEmailDialog.tsx";
 import UpdateDateOfBirth from "@/components/users/UpdateDateOfBirthDialog.tsx";
 import UpdateUsername from "@/components/users/UpdateUsernameDialog.tsx";
+import UpdatePassword from "@/components/users/UpdatePasswordDialog.tsx";
 
 
 interface User {
@@ -33,6 +34,7 @@ const MyAccount: React.FC = () => {
     const [emailOpen, setEmailOpen] = React.useState(false);
     const [dateOfBirthOpen, setDateOfBirthOpen] = React.useState(false);
     const [usernameOpen, setUsernameOpen] = React.useState(false);
+    const [passwordOpen, setPasswordOpen] = React.useState(false);
 
     const handleUsernameOpen = () => {
         setUsernameOpen(true);
@@ -41,7 +43,13 @@ const MyAccount: React.FC = () => {
     const onUsernameClose = () => {
         setUsernameOpen(false);
         fetchProfile();
-    };
+    }
+    const handlePasswordOpen = () => {
+        setPasswordOpen(true);
+    }
+    const onPasswordClose = () => {
+        setPasswordOpen(false);
+    }
 
     const handleDisplayNameOpen = () => {
         setdisplayNameOpen(true);
@@ -205,6 +213,13 @@ const MyAccount: React.FC = () => {
                                 <ImageCropper onAvatarUpdated={fetchProfile}/>
                                 <Button variant='contained' color='error' onClick={handleRemoveAvatar}>Remove
                                     avatar</Button>
+                            </Stack>
+                            <Typography variant='h5'>Password and Authentication</Typography>
+                            <Stack direction='row' justifyContent='space-between'>
+                                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose}/>
+                                <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
+                                    Change password
+                                </Button>
                             </Stack>
                         </Stack>
                     </CardContent>

@@ -75,7 +75,7 @@ export default function UpdateEmail({ open, handleClose }: ForgotPasswordProps) 
                 sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}
             >
                 <DialogContentText>
-                    Enter your new email address and we will send a link to your previous email address to confirm.
+                    Enter your new email address.
                 </DialogContentText>
 
                 <FormControl fullWidth variant="outlined" error={newEmailError}>
