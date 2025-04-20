@@ -12,21 +12,30 @@ import {
     FormHelperText
 } from '@mui/material';
 import { userApi } from "@/api/parts/user.ts";
+import { useState } from "react";
+import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
+import { twoFAApi } from "@/api/parts/2fa.ts";
+import axios from "axios";
 
 interface ForgotPasswordProps {
     open: boolean;
     handleClose: () => void;
+    is2FAEnabled: boolean;
 }
 
-export default function UpdateEmail({ open, handleClose }: ForgotPasswordProps) {
+export default function UpdateEmail({ open, handleClose, is2FAEnabled}: ForgotPasswordProps) {
     const [email, setEmail] = React.useState('');
+    const [token, setToken] = useState<string>("");
     const [newEmailError, setNewEmailError] = React.useState(false);
     const [newEmailErrorMessage, setNewEmailErrorMessage] = React.useState('');
+    const [codeError, setCodeError] = React.useState(false);
 
     const handleCloseWithReset = () => {
         setNewEmailError(false);
         setNewEmailErrorMessage('');
         setEmail('');
+        setToken('');
+        setCodeError(false);
         handleClose();
     };
 
@@ -50,12 +59,37 @@ export default function UpdateEmail({ open, handleClose }: ForgotPasswordProps) 
             }
             return;
         }
+        if(is2FAEnabled && token.length < 6){
+            setCodeError(true);
+            return;
+        }
+        else{
+            setCodeError(false);
+        }
+        try{
+            if(is2FAEnabled){
+                await twoFAApi.verifyTwoFAToken(token);
+            }
+            await userApi.updateEmail(email);
+            setEmail('');
+            setNewEmailError(false);
+            setNewEmailErrorMessage('');
+            handleClose();
+        }
+        catch (err: unknown) {
+            if(axios.isAxiosError(err)){
+                const errorCode = err.message;
 
-        await userApi.updateEmail(email);
-        setEmail('');
-        setNewEmailError(false);
-        setNewEmailErrorMessage('');
-        handleClose();
+                switch (errorCode) {
+                    case "invalid_token":
+                        setCodeError(true);
+                        break;
+                    default:
+                        setNewEmailError(true);
+                        setNewEmailErrorMessage("Something went wrong. Please try again.");
+                }
+            }
+        }
     };
 
     return (
@@ -91,6 +125,16 @@ export default function UpdateEmail({ open, handleClose }: ForgotPasswordProps) 
                     />
                     {newEmailError && <FormHelperText>{newEmailErrorMessage}</FormHelperText>}
                 </FormControl>
+                {is2FAEnabled && (
+                    <VerificationCodeInput
+                        value={token}
+                        onChange={(value) => {
+                            setToken(value);
+                            if (codeError) setCodeError(false);
+                        }}
+                        error={codeError}
+                    />
+                )}
             </DialogContent>
             <DialogActions sx={{ pb: 3, px: 3 }}>
                 <Button onClick={handleCloseWithReset}>Cancel</Button>

@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import routes from './routes';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import twoFARoutes from './routes/twofa';
 import { connectDb } from './db/db';
 
 const app = express();
@@ -30,6 +31,7 @@ routes(app);
 //rute
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/2fa', twoFARoutes);
 
 
 const port = process.env.PORT || 3000;

@@ -100,7 +100,7 @@ export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBir
             <DialogActions sx={{ pb: 3, px: 3 }}>
                 <Button onClick={handleCloseWithReset}>Cancel</Button>
                 <Button variant="contained" type="submit">
-                    Continue
+                    Set
                 </Button>
             </DialogActions>
         </Dialog>

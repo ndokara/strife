@@ -13,20 +13,26 @@ import {
 } from '@mui/material';
 import { useState } from "react";
 import { userApi } from "@/api/parts/user.ts";
+import { twoFAApi } from "@/api/parts/2fa.ts";
+import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
+import axios from "axios";
 
 interface UpdateUsernameProps {
     open: boolean;
     handleClose: () => void;
+    is2FAEnabled: boolean;
 }
 
-export default function UpdateUsername({ open, handleClose }: UpdateUsernameProps) {
+export default function UpdateUsername({ open, handleClose, is2FAEnabled}: UpdateUsernameProps) {
     const [username, setUsername] = useState<string>("");
     const [password, setPassword] = useState<string>("");
+    const [token, setToken] = useState<string>("");
 
     const [usernameError, setUsernameError] = React.useState(false);
     const [usernameErrorMessage, setUsernameErrorMessage] = React.useState('');
     const [passwordError, setPasswordError] = React.useState(false);
     const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
+    const [codeError, setCodeError] = React.useState(false);
 
     const resetFields = () =>{
         setUsernameError(false);
@@ -35,6 +41,8 @@ export default function UpdateUsername({ open, handleClose }: UpdateUsernameProp
         setPasswordError(false);
         setPasswordErrorMessage('');
         setPassword('');
+        setToken('');
+        setCodeError(false);
     }
 
     const handleCloseWithReset = () => {
@@ -65,29 +73,43 @@ export default function UpdateUsername({ open, handleClose }: UpdateUsernameProp
             setUsernameError(false);
             setUsernameErrorMessage("");
         }
+        if(is2FAEnabled && token.length < 6){
+            setCodeError(true);
+        }
+        else{
+            setCodeError(false);
+        }
 
         if (!isValid) return;
 
         try {
+            if(is2FAEnabled){
+                await twoFAApi.verifyTwoFAToken(token);
+            }
             await userApi.updateUsername(password, username);
 
             resetFields();
             handleClose();
-        } catch (error: any) {
-            const errorCode = error.message;
+        } catch (err: unknown) {
+            if(axios.isAxiosError(err)){
+                const errorCode = err.message;
 
-            switch (errorCode) {
-                case "invalid_password":
-                    setPasswordError(true);
-                    setPasswordErrorMessage("Incorrect password.");
-                    break;
-                case "username_taken":
-                    setUsernameError(true);
-                    setUsernameErrorMessage("This username is already taken.");
-                    break;
-                default:
-                    setUsernameError(true);
-                    setUsernameErrorMessage("Something went wrong. Please try again.");
+                switch (errorCode) {
+                    case "invalid_password":
+                        setPasswordError(true);
+                        setPasswordErrorMessage("Incorrect password.");
+                        break;
+                    case "username_taken":
+                        setUsernameError(true);
+                        setUsernameErrorMessage("This username is already taken.");
+                        break;
+                    case "invalid_token":
+                        setCodeError(true);
+                        break;
+                    default:
+                        setUsernameError(true);
+                        setUsernameErrorMessage("Something went wrong. Please try again.");
+                }
             }
         }
     };
@@ -125,6 +147,16 @@ export default function UpdateUsername({ open, handleClose }: UpdateUsernameProp
                     />
                     {passwordError && <FormHelperText>{passwordErrorMessage}</FormHelperText>}
                 </FormControl>
+                {is2FAEnabled && (
+                    <VerificationCodeInput
+                        value={token}
+                        onChange={(value) => {
+                            setToken(value);
+                            if (codeError) setCodeError(false);
+                        }}
+                        error={codeError}
+                    />
+                )}
                 <FormControl fullWidth variant="outlined" error={usernameError}>
                     <InputLabel>Username</InputLabel>
                     <OutlinedInput

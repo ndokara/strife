@@ -13,9 +13,10 @@ import Divider from "@mui/material/Divider";
 import StrifeLogo from "../theme/StrifeLogo.tsx";
 import ForgotPassword from "../components/auth/ForgotPasswordDialog.tsx";
 import { RequiredStar } from "../components/auth/RequiredStar.tsx";
-import { authApi } from "@/api/parts/auth.ts";
+import { authApi, LoginResponse } from "@/api/parts/auth.ts";
 import { AuthContainer } from "@/components/auth/AuthContainer.tsx";
 import { AuthCard } from "@/components/auth/AuthCard.tsx";
+import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
 
@@ -28,6 +29,11 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     const [username, setUsername] = useState<string>("");
     const [password, setPassword] = useState<string>("");
 
+    const [is2FARequired, setIs2FARequired] = useState(false);
+    const [tempToken, setTempToken] = useState('');
+    const [code, setCode] = useState('');
+    const [codeError, setCodeError] = useState(false);
+
     const [loginError, setLoginError] = useState<string>("");
     const [open, setOpen] = React.useState(false);
     const navigate = useNavigate();
@@ -39,25 +45,17 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     const onClose = () => {
         setOpen(false);
     };
-
-    const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
-        event.preventDefault(); // Prevent default form submission
-        const validSubmission: boolean = validateInputs();
-        if (validSubmission) {
-            try {
-                const { accessToken } = await authApi.login(username, password);
-                localStorage.setItem('accessToken', accessToken);
-                navigate('/dashboard/myaccount');
-            } catch (error: any) {
-                console.error('Login failed: ', error);
-                if (error.response && error.response.status === 400) {
-                    setPasswordError(true);
-                    setPasswordErrorMessage('Invalid username or password');
-                }
+    const handle2FASubmit = async () => {
+        try {
+            const { accessToken } = await authApi.verify2FAOnLogin(code, tempToken);
+            localStorage.setItem('accessToken', accessToken);
+            navigate('/dashboard/myaccount');
+        } catch (error: any) {
+            if (error.response.status === 401) {
+                setCodeError(true);
             }
         }
-    }, [username, password, navigate, usernameError, passwordError]);
-
+    };
     const validateInputs = (): boolean => {
         let isValid = true;
 
@@ -84,6 +82,38 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
         return isValid;
     };
 
+    const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
+        event.preventDefault();
+        if (!validateInputs()) return;
+
+        try {
+            const response: LoginResponse = await authApi.login(username, password);
+
+            if ('token' in response) {
+                // No 2FA required
+                localStorage.setItem('token', response.accessToken);
+                navigate('/dashboard/myaccount');
+            } else if ('tempToken' in response) {
+                // 2FA is required
+                if (response.tempToken) {
+                    setTempToken(response.tempToken);
+                }
+                setIs2FARequired(true);
+            }
+        } catch (error: any) {
+            if (error.response && error.response.status === 400) {
+                setPasswordError(true);
+                setPasswordErrorMessage('Invalid username or password');
+            }
+        }
+    }, [username, password, navigate, validateInputs]);
+
+
+    const handleChangeCode = (code: string): void => {
+        setCode(code);
+        setCodeError(false);
+    }
+
     return (
         <AppTheme {...props}>
             <CssBaseline enableColorScheme/>
@@ -106,103 +136,134 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
                     />
                     <ColorModeToggleButton/>
                 </Stack>
-                <AuthCard variant="outlined">
-                    <Typography component="h1" variant="h3" sx={{ width: "100%" }}>
-                        Log in
-                    </Typography>
-                    <Box
-                        component='form'
-                        onSubmit={handleSubmit}
-                        noValidate={true}
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            width: '100%',
-                            gap: 2,
-                        }}
-                    >
-                        <FormControl>
-                            <FormLabel htmlFor="username">
-                                Username
-                                <RequiredStar/>
-                            </FormLabel>
-                            <TextField
-                                error={usernameError}
-                                helperText={usernameErrorMessage}
-                                id="username"
-                                type="text"
-                                onChange={(e) => setUsername(e.target.value)}
-                                value={username}
-                                name="username"
-                                placeholder="Your username"
-                                autoComplete="username"
-                                // autoFocus
-                                required
-                                fullWidth
-                                variant="outlined"
-                                color={usernameError ? 'error' : 'primary'}
-                            />
-                        </FormControl>
-                        <FormControl>
-                            <FormLabel htmlFor="password">
-                                Password
-                                <RequiredStar/>
-                            </FormLabel>
-                            <TextField
-                                error={passwordError}
-                                helperText={passwordErrorMessage}
-                                name="password"
-                                placeholder="••••••"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                id="password"
-                                autoComplete="current-password"
-                                autoFocus
-                                required
-                                fullWidth
-                                variant="outlined"
-                                color={passwordError ? 'error' : 'primary'}
-                            />
-                        </FormControl>
-                        <Divider></Divider>
-                        {loginError && (
-                            <Typography
-                                variant="body2"
-                                color="error"
-                                sx={{ textAlign: "center", mt: 1 }}
-                            >
-                                {loginError}
-                            </Typography>
-                        )}
-                        <ForgotPassword open={open} handleClose={onClose}/>
-                        <Typography sx={{ textAlign: 'left' }}>
-                            <Link
-                                component="button"
-                                type="button"
-                                color='inherit'
-                                onClick={handleClickOpen}
-                                variant="body2"
-                            >
-                                Forgot your password?
-                            </Link>
-                        </Typography>
-                        <Button
-                            type="submit"
-                            fullWidth
-                            variant="contained"
-                            onClick={validateInputs}
-                        >
+                {!is2FARequired ? (
+                    <AuthCard variant="outlined">
+                        <Typography component="h1" variant="h3" sx={{ width: "100%" }}>
                             Log in
-                        </Button>
-                        <Typography sx={{ textAlign: 'center' }}>
-                            Don&apos;t have an account?{' '}
-                            <Link component={RouterLink} to="/register" color="inherit">
-                                Register
-                            </Link>
                         </Typography>
-                    </Box>
-                </AuthCard>
+                        <Box
+                            component='form'
+                            onSubmit={handleSubmit}
+                            noValidate={true}
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                width: '100%',
+                                gap: 2,
+                            }}
+                        >
+                            <FormControl>
+                                <FormLabel htmlFor="username">
+                                    Username
+                                    <RequiredStar/>
+                                </FormLabel>
+                                <TextField
+                                    error={usernameError}
+                                    helperText={usernameErrorMessage}
+                                    id="username"
+                                    type="text"
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    value={username}
+                                    name="username"
+                                    placeholder="Your username"
+                                    autoComplete="username"
+                                    // autoFocus
+                                    required
+                                    fullWidth
+                                    variant="outlined"
+                                    color={usernameError ? 'error' : 'primary'}
+                                />
+                            </FormControl>
+                            <FormControl>
+                                <FormLabel htmlFor="password">
+                                    Password
+                                    <RequiredStar/>
+                                </FormLabel>
+                                <TextField
+                                    error={passwordError}
+                                    helperText={passwordErrorMessage}
+                                    name="password"
+                                    placeholder="••••••"
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    id="password"
+                                    autoComplete="current-password"
+                                    autoFocus
+                                    required
+                                    fullWidth
+                                    variant="outlined"
+                                    color={passwordError ? 'error' : 'primary'}
+                                />
+                            </FormControl>
+                            <Divider></Divider>
+                            {loginError && (
+                                <Typography
+                                    variant="body2"
+                                    color="error"
+                                    sx={{ textAlign: "center", mt: 1 }}
+                                >
+                                    {loginError}
+                                </Typography>
+                            )}
+                            <ForgotPassword open={open} handleClose={onClose}/>
+                            <Typography sx={{ textAlign: 'left' }}>
+                                <Link
+                                    component="button"
+                                    type="button"
+                                    color='inherit'
+                                    onClick={handleClickOpen}
+                                    variant="body2"
+                                >
+                                    Forgot your password?
+                                </Link>
+                            </Typography>
+                            <Button
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                onClick={validateInputs}
+                            >
+                                Log in
+                            </Button>
+                            <Typography sx={{ textAlign: 'center' }}>
+                                Don&apos;t have an account?{' '}
+                                <Link component={RouterLink} to="/register" color="inherit">
+                                    Register
+                                </Link>
+                            </Typography>
+                        </Box>
+                    </AuthCard>
+                ) : (
+                    <AuthCard variant="outlined">
+                        <Typography component="h1" variant="h5">
+                            Enter 2FA Code
+                        </Typography>
+                        {/*<TextField*/}
+                        {/*    label="Verification Code"*/}
+                        {/*    value={code}*/}
+                        {/*    onChange={(e) => setCode(e.target.value)}*/}
+                        {/*    error={!!codeError}*/}
+                        {/*    helperText={codeError}*/}
+                        {/*    fullWidth*/}
+                        {/*/>*/}
+                        <VerificationCodeInput
+                            value={code}
+                            // onChange={setCode}
+                            onChange={(code) => handleChangeCode(code)}
+                            onComplete={handle2FASubmit}
+                            error={codeError}
+                        />
+                        <Button
+                            variant="contained"
+                            fullWidth
+                            sx={{ mt: 2 }}
+                            onClick={handle2FASubmit}
+                        >
+                            Verify
+                        </Button>
+                    </AuthCard>
+                )}
             </AuthContainer>
         </AppTheme>
     );

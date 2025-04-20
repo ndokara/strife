@@ -1,7 +1,6 @@
 import bcrypt from 'bcrypt';
 import { model, Schema, Model, Document } from 'mongoose';
 
-
 export interface IUser extends Document {
     email: string;
     displayName: string;
@@ -9,6 +8,8 @@ export interface IUser extends Document {
     password: string;
     dateOfBirth: Date;
     avatarUrl: string;
+    twoFASecret?: string;
+    isTwoFAEnabled: boolean;
 }
 
 const UserSchema: Schema<IUser> = new Schema({
@@ -18,6 +19,8 @@ const UserSchema: Schema<IUser> = new Schema({
     password: { type: String, required: true },
     dateOfBirth: { type: Date, required: true },
     avatarUrl: { type: String, required: true, unique: true },
+    twoFASecret: { type: String },
+    isTwoFAEnabled: { type: Boolean, default: false },
 });
 
 UserSchema.pre('save', async function (next) {
@@ -28,5 +31,4 @@ UserSchema.pre('save', async function (next) {
 });
 
 const User: Model<IUser> = model('User', UserSchema);
-
 export default User;

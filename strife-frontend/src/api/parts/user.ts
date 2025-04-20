@@ -8,6 +8,7 @@ export interface User {
     username: string;
     dateOfBirth: Date;
     avatarUrl: string;
+    is2FAEnabled: boolean;
 }
 
 class UserApi extends BackendApi {

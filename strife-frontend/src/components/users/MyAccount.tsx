@@ -13,6 +13,10 @@ import UpdateEmail from "@/components/users/UpdateEmailDialog.tsx";
 import UpdateDateOfBirth from "@/components/users/UpdateDateOfBirthDialog.tsx";
 import UpdateUsername from "@/components/users/UpdateUsernameDialog.tsx";
 import UpdatePassword from "@/components/users/UpdatePasswordDialog.tsx";
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import LockIcon from '@mui/icons-material/Lock';
+import Enable2FADialog from "@/components/2fa/Enable2FADialog.tsx";
+import Disable2FADialog from "@/components/2fa/Disable2FADialog.tsx";
 
 
 interface User {
@@ -22,6 +26,7 @@ interface User {
     username: string;
     dateOfBirth: Date;
     avatarUrl: string;
+    is2FAEnabled: boolean;
 }
 
 const MyAccount: React.FC = () => {
@@ -35,6 +40,23 @@ const MyAccount: React.FC = () => {
     const [dateOfBirthOpen, setDateOfBirthOpen] = React.useState(false);
     const [usernameOpen, setUsernameOpen] = React.useState(false);
     const [passwordOpen, setPasswordOpen] = React.useState(false);
+    const [twoFAOpen, setTwoFAOpen] = React.useState(false);
+    const [disableTwoFAOpen, setDisableTwoFAOpen] = React.useState(false);
+
+    const handleTwoFAOpen = () =>{
+        setTwoFAOpen(true);
+    }
+    const handleTwoFAClose = () =>{
+        setTwoFAOpen(false);
+        fetchProfile();
+    }
+    const handleDisableTwoFAOpen = () =>{
+        setDisableTwoFAOpen(true);
+    }
+    const handleDisableTwoFAClose = () =>{
+        setDisableTwoFAOpen(false);
+        fetchProfile();
+    }
 
     const handleUsernameOpen = () => {
         setUsernameOpen(true);
@@ -177,7 +199,7 @@ const MyAccount: React.FC = () => {
                                     <Typography variant='h6'>Username</Typography>
                                     <Typography variant='body1'> {user.username}</Typography>
                                 </Stack>
-                                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose}/>
+                                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} is2FAEnabled={user.is2FAEnabled}/>
                                 <Button variant='contained'
                                         onClick={handleUsernameOpen}>Edit</Button>
                             </Stack>
@@ -195,7 +217,7 @@ const MyAccount: React.FC = () => {
                                     <Typography variant='h6'>Email</Typography>
                                     <Typography variant='body1'> {user.email}</Typography>
                                 </Stack>
-                                <UpdateEmail open={emailOpen} handleClose={onEmailClose}/>
+                                <UpdateEmail open={emailOpen} handleClose={onEmailClose} is2FAEnabled={user.is2FAEnabled}/>
                                 <Button variant='contained'
                                         onClick={handleEmailOpen}>Edit</Button>
                             </Stack>
@@ -215,8 +237,38 @@ const MyAccount: React.FC = () => {
                                     avatar</Button>
                             </Stack>
                             <Typography variant='h5'>Password and Authentication</Typography>
+                            {!user.is2FAEnabled && (
+                                <Stack direction='row' spacing={1}>
+                                    <LockOpenIcon color='error'/>
+                                    <Typography variant='h6' color='error'>Two Factor Authentication is not enabled.</Typography>
+                                </Stack>
+                            )}
+                            {user.is2FAEnabled && (
+                                <Stack direction='row' spacing={1}>
+                                    <LockIcon color='success'/>
+                                    <Typography variant='h6' color='success'>Two Factor Authentication is enabled.</Typography>
+                                </Stack>
+                            )}
+                            {!user.is2FAEnabled && (
+                                <Stack direction='row'>
+                                    <Enable2FADialog
+                                        open={twoFAOpen}
+                                        onClose={handleTwoFAClose}
+                                    />
+                                    <Button variant='contained' onClick={handleTwoFAOpen}>Add Authenticator App</Button>
+                                </Stack>
+                            )}
+                            {user.is2FAEnabled && (
+                                <Stack direction='row'>
+                                    <Disable2FADialog
+                                        open={disableTwoFAOpen}
+                                        onClose={handleDisableTwoFAClose}
+                                    />
+                                    <Button variant='contained' color='error' onClick={handleDisableTwoFAOpen}>Remove Authenticator App</Button>
+                                </Stack>
+                            )}
                             <Stack direction='row' justifyContent='space-between'>
-                                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose}/>
+                                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} is2FAEnabled={user.is2FAEnabled}/>
                                 <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
                                     Change password
                                 </Button>
