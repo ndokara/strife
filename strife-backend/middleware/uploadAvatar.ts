@@ -9,7 +9,6 @@ const fileFilter = (
     file: Express.Multer.File,
     cb: FileFilterCallback
 ): void => {
-    const allowedTypes = ['image/jpeg', 'image/png'];
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {

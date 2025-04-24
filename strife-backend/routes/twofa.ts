@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
 import speakeasy, { GeneratedSecret } from 'speakeasy';
-import qrcode from 'qrcode';
 import User, { IUser } from '../models/user';
 import { AuthRequest, verifyToken } from '../middleware/verifyToken';
 import router from "./auth";

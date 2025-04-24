@@ -118,10 +118,8 @@ export default function UpdatePassword({ open, handleClose, is2FAEnabled}: Updat
                             setConfirmPasswordError(true);
                             setConfirmPasswordErrorMessage('Something went wrong. Please try again.');
                         }
-
                 }
             }
-
         }
 
     };

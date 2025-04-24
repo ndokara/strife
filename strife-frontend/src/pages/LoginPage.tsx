@@ -17,6 +17,7 @@ import { authApi, LoginResponse } from "@/api/parts/auth.ts";
 import { AuthContainer } from "@/components/auth/AuthContainer.tsx";
 import { AuthCard } from "@/components/auth/AuthCard.tsx";
 import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
+import { isAxiosError } from "axios";
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
 
@@ -56,6 +57,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
             }
         }
     };
+
     const validateInputs = (): boolean => {
         let isValid = true;
 
@@ -100,10 +102,12 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
                 }
                 setIs2FARequired(true);
             }
-        } catch (error: any) {
-            if (error.response && error.response.status === 400) {
-                setPasswordError(true);
-                setPasswordErrorMessage('Invalid username or password');
+        } catch (err: unknown) {
+            if (isAxiosError(err)){
+                if (err.response && err.response.status === 400) {
+                    setPasswordError(true);
+                    setPasswordErrorMessage('Invalid username or password');
+                }
             }
         }
     }, [username, password, navigate, validateInputs]);

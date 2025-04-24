@@ -25,7 +25,7 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
         });
         await user.save();
 
-        const token: string = createSecretToken(user.id.toString());
+        const token = createSecretToken(user.id.toString());
 
         res.cookie("token", token, {
             path: "/",
@@ -73,7 +73,6 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
         });
 
         return res.json({ token: token, message: "Login Successful." });
-
     } catch (error) {
         res.status(500).json({ error: (error as Error).message });
     }

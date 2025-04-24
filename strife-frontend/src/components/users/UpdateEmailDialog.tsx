@@ -51,16 +51,7 @@ export default function UpdateEmail({ open, handleClose, is2FAEnabled}: ForgotPa
 
         if (!validateEmail(email)) {
             setNewEmailError(true);
-            if(!email){
-                setNewEmailErrorMessage('Please enter your email.')
-            }
-            else{
-                setNewEmailErrorMessage('Invalid email format');
-            }
-            return;
-        }
-        if(is2FAEnabled && token.length < 6){
-            setCodeError(true);
+            setNewEmailErrorMessage(!email ? 'Please enter your email.' : 'Invalid email format');
             return;
         }
         else{
