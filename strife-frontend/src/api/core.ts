@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig} from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { HttpHeader, HttpStatusCode, MediaType } from './http';
 
 //Axios+interceptors
@@ -16,7 +16,6 @@ const authInterceptor = async (config: InternalAxiosRequestConfig): Promise<Inte
 const responseInterceptor = (error: unknown) => {
     if (axios.isAxiosError(error)) {
         if (error.response?.status === HttpStatusCode.UNAUTHORIZED) {
-            // Optional: trigger logout, show modal, etc.
             localStorage.removeItem('accessToken');
         }
         if (!error.response) {
@@ -42,5 +41,4 @@ export const createAxiosInstance = (basePath: string): AxiosInstance => {
     return instance;
 };
 
-export type ApiError = AxiosError;
 export const isApiError = axios.isAxiosError;

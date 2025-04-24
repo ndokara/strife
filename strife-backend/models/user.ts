@@ -2,12 +2,13 @@ import bcrypt from 'bcrypt';
 import { model, Schema, Model, Document } from 'mongoose';
 
 
-export interface IUser extends Document{
-    email:string;
-    displayName:string;
-    username:string;
-    password:string;
-    dateOfBirth:Date;
+export interface IUser extends Document {
+    email: string;
+    displayName: string;
+    username: string;
+    password: string;
+    dateOfBirth: Date;
+    avatarUrl: string;
 }
 
 const UserSchema: Schema<IUser> = new Schema({
@@ -16,9 +17,10 @@ const UserSchema: Schema<IUser> = new Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     dateOfBirth: { type: Date, required: true },
+    avatarUrl: { type: String, required: true, unique: true },
 });
 
-UserSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

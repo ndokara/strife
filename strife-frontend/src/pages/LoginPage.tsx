@@ -47,9 +47,13 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
             try {
                 const { accessToken } = await authApi.login(username, password);
                 localStorage.setItem('accessToken', accessToken);
-                navigate('/profile');
-            } catch (error) {
+                navigate('/dashboard/myaccount');
+            } catch (error: any) {
                 console.error('Login failed: ', error);
+                if (error.response && error.response.status === 400) {
+                    setPasswordError(true);
+                    setPasswordErrorMessage('Invalid username or password');
+                }
             }
         }
     }, [username, password, navigate, usernameError, passwordError]);

@@ -61,6 +61,7 @@ function RegisterCard() {
             setEmailError(false);
             setEmailErrorMessage('');
         }
+
         if ((!username.trim() || username.length < 6)) {
             setUsernameError(true);
             setUsernameErrorMessage("Username must be at least 6 characters long.");
@@ -69,6 +70,7 @@ function RegisterCard() {
             setUsernameError(false);
             setUsernameErrorMessage("");
         }
+
         if (!password.trim() || password.length < 6) {
             setPasswordError(true);
             setPasswordErrorMessage("Password must be at least 6 characters long.");
@@ -77,12 +79,23 @@ function RegisterCard() {
             setPasswordError(false);
             setPasswordErrorMessage("");
         }
-        const minValidDate = dayjs().subtract(100, "year");
+
+        const today = dayjs();
+        const minAgeDate = today.subtract(13, 'years');
+        const maxDate = today;
+        const minValidDate = today.subtract(100, 'years');
 
         if (dateOfBirth && dateOfBirth.isSame(defaultDate, 'day')) {
-            console.log('trying')
             setDateOfBirthError(true);
             setDateOfBirthErrorMessage('Please select a valid date of birth.');
+            isValid = false;
+        } else if (dateOfBirth && dateOfBirth.isAfter(maxDate)) {
+            setDateOfBirthError(true);
+            setDateOfBirthErrorMessage('Date of birth cannot be in the future.');
+            isValid = false;
+        } else if (dateOfBirth && dateOfBirth.isAfter(minAgeDate)) {
+            setDateOfBirthError(true);
+            setDateOfBirthErrorMessage('You must be at least 13 years old.');
             isValid = false;
         } else if (dateOfBirth && dateOfBirth.isBefore(minValidDate)) {
             setDateOfBirthError(true);
@@ -92,8 +105,10 @@ function RegisterCard() {
             setDateOfBirthError(false);
             setDateOfBirthErrorMessage('');
         }
+
         return isValid;
-    },[email, username, password, dateOfBirth, defaultDate]);
+    }, [email, username, password, dateOfBirth, defaultDate]);
+
 
     const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
         event.preventDefault(); // Prevent default form submission

@@ -26,6 +26,21 @@ declare module '@mui/material/styles' {
                 };
             };
         };
+        MuiStaticDatePicker?: {
+            styleOverrides?: {
+                paper?: (props: { theme: Theme }) => React.CSSProperties;
+            };
+            defaultProps?: {
+                slotProps?: {
+                    popper?: {
+                        sx?: (theme: Theme) => React.CSSProperties;
+                    };
+                    day?: {
+                        sx?: (theme: Theme) => React.CSSProperties;
+                    };
+                };
+            };
+        };
     }
 }
 
@@ -79,6 +94,39 @@ export const dataDisplayCustomizations: Components<CustomTheme> = {
     },
     
     MuiDatePicker: {
+        defaultProps: {
+            slotProps: {
+                popper: {
+                    sx: (theme) => ({
+                        "&.MuiPaper-root": {
+                            backgroundColor: theme.palette.background.paper,
+                            ...theme.applyStyles("dark", {
+                                backgroundColor: "black", // Ensure pure black
+                                opacity: 1, // Remove any transparency
+                                boxShadow: "none", // Remove MUI's default shadow
+                                elevation: 0, // Ensure no extra styling
+                            }),
+                        },
+                    }) as CSSProperties // had to do this, TS complains,
+                },
+                day: {
+                    sx: (theme) => ({
+                        borderRadius: "4px", // Rectangular shape
+                        "&.Mui-selected": {
+                            border: "2px solid",
+                            borderColor: theme.palette.primary.main,
+                            backgroundColor: "transparent",
+                        },
+                        "&:hover, &.Mui-selected:hover": {
+                            borderRadius: "4px",
+                            backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                        },
+                    }),
+                },
+            },
+        },
+    },
+    MuiStaticDatePicker: {
         defaultProps: {
             slotProps: {
                 popper: {
