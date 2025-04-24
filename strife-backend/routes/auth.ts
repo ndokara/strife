@@ -14,7 +14,7 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
         if (existingUser) {
             return res.status(400).json({ message: "Email or username already in use" });
         }
-        const defaultAvatarUrl: string = `${process.env.MINIO_ENDPOINT}/avatars/avatar-default.jpg`
+        const defaultAvatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`
         const user: IUser = new User({
             email,
             displayName,

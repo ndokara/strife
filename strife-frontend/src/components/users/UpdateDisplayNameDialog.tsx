@@ -15,15 +15,20 @@ import { userApi } from "@/api/parts/user.ts";
 interface UpdateDisplayNameProps {
     open: boolean;
     handleClose: () => void;
+    username: string;
 }
 
-export default function UpdateDisplayName({ open, handleClose }: UpdateDisplayNameProps) {
+export default function UpdateDisplayName({ open, handleClose, username }: UpdateDisplayNameProps) {
     const [displayName, setDisplayName] = React.useState('');
 
     const handleSubmit = async (event: React.FormEvent<HTMLDivElement>): Promise<void> => {
         event.preventDefault();
         event.stopPropagation();
-        await userApi.updateDisplayName(displayName);
+        if (!displayName) {
+            await userApi.updateDisplayName(username);
+        } else {
+            await userApi.updateDisplayName(displayName);
+        }
         handleClose();
     };
 
@@ -45,6 +50,9 @@ export default function UpdateDisplayName({ open, handleClose }: UpdateDisplayNa
             >
                 <DialogContentText>
                     Enter your new display name.
+                </DialogContentText>
+                <DialogContentText variant='caption'>
+                    If you do not enter a new display name, your display name will be reverted to your username.
                 </DialogContentText>
 
                 <FormControl fullWidth variant="outlined">

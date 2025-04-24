@@ -15,8 +15,8 @@ interface UpdateDateOfBirthProps {
 export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBirthProps) {
     const defaultDate: Dayjs = dayjs("2000-01-01"); // Ensure this is a valid Dayjs object
     const [dateOfBirth, setDateOfBirth] = useState<Dayjs | null>(defaultDate);
-    const [dateOfBirthError, setDateOfBirthError] = React.useState(false);
-    const [dateOfBirthErrorMessage, setDateOfBirthErrorMessage] = React.useState('');
+    const [dateOfBirthError, setDateOfBirthError] = useState(false);
+    const [dateOfBirthErrorMessage, setDateOfBirthErrorMessage] = useState('');
 
     const handleCloseWithReset = () => {
         setDateOfBirthError(false);
@@ -61,7 +61,7 @@ export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBir
         setDateOfBirthError(false);
         setDateOfBirthErrorMessage('');
 
-        await userApi.updateDateOfBirth(dateOfBirth.toISOString());
+        await userApi.updateDateOfBirth(dateOfBirth);
         handleClose();
     };
 

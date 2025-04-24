@@ -16,6 +16,7 @@ import { userApi } from "@/api/parts/user.ts";
 import { twoFAApi } from "@/api/parts/2fa.ts";
 import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
 import axios from "axios";
+import { AxiosError } from "axios";
 
 interface UpdatePasswordProps {
     open: boolean;
@@ -68,7 +69,7 @@ export default function UpdatePassword({ open, handleClose, is2FAEnabled}: Updat
             setCurrentPasswordErrorMessage("");
         }
 
-        if (!newPassword.trim() || newPassword.length < 6) {
+        if (newPassword.trim().length < 6) {
             setConfirmPasswordError(true);
             setConfirmPasswordErrorMessage("New password must be at least 6 characters long.");
             isValid = false;

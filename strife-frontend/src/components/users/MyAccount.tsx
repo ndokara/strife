@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { NavigateFunction, useNavigate } from "react-router";
-import { userApi } from "@/api/parts/user.ts";
+import { User, userApi } from "@/api/parts/user.ts";
 import { isApiError } from "@/api/core.ts";
 import { authApi } from "@/api/parts/auth.ts";
 import { HttpStatusCode } from "@/api/http.ts";
@@ -18,24 +18,13 @@ import LockIcon from '@mui/icons-material/Lock';
 import Enable2FADialog from "@/components/2fa/Enable2FADialog.tsx";
 import Disable2FADialog from "@/components/2fa/Disable2FADialog.tsx";
 
-
-interface User {
-    id: string;
-    email: string;
-    displayName: string;
-    username: string;
-    dateOfBirth: Date;
-    avatarUrl: string;
-    is2FAEnabled: boolean;
-}
-
 const MyAccount: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const navigate: NavigateFunction = useNavigate();
 
-    const [displayNameOpen, setdisplayNameOpen] = React.useState(false);
+    const [displayNameOpen, setDisplayNameOpen] = React.useState(false);
     const [emailOpen, setEmailOpen] = React.useState(false);
     const [dateOfBirthOpen, setDateOfBirthOpen] = React.useState(false);
     const [usernameOpen, setUsernameOpen] = React.useState(false);
@@ -74,11 +63,11 @@ const MyAccount: React.FC = () => {
     }
 
     const handleDisplayNameOpen = () => {
-        setdisplayNameOpen(true);
+        setDisplayNameOpen(true);
     };
 
     const onDisplayNameClose = () => {
-        setdisplayNameOpen(false);
+        setDisplayNameOpen(false);
         fetchProfile();
     };
     const handleEmailOpen = () => {
@@ -208,7 +197,8 @@ const MyAccount: React.FC = () => {
                                     <Typography variant='h6'>Display name</Typography>
                                     <Typography variant='body1'> {user.displayName}</Typography>
                                 </Stack>
-                                <UpdateDisplayName open={displayNameOpen} handleClose={onDisplayNameClose}/>
+                                <UpdateDisplayName open={displayNameOpen} handleClose={onDisplayNameClose}
+                                                   username={user.username}/>
                                 <Button variant='contained'
                                         onClick={handleDisplayNameOpen}>Edit</Button>
                             </Stack>

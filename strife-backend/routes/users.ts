@@ -1,22 +1,26 @@
-import { AuthRequest, verifyToken } from "../middleware/verifyToken";
+import { verifyToken } from "../middleware/verifyToken";
 import { NextFunction, Request, Response } from "express";
 import User, { IUser } from "../models/user";
 import router from "./auth";
 import uploadAvatar from "../middleware/uploadAvatar";
 import { fileTypeFromBuffer, FileTypeResult } from 'file-type'
 import bcrypt from "bcrypt";
-import s3 from '../db/minioClient';
+import s3 from '../db/s3';
+import { PutObjectRequest } from "aws-sdk/clients/s3";
+import { promisify } from "node:util";
 import sharp = require('sharp');
 import crypto = require('crypto');
 
+//TODO: set max length of all credentials on registration and updating.
+
+const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'] as const;
+const defaultAvatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg` as const;
+
+const putObjectPromise: (params: PutObjectRequest) => Promise<any> = promisify(s3.putObject.bind(s3));
+
 router.get('/profile', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            res.status(401).json({ message: 'Unauthorized' });
-            return;
-        }
-        const user: IUser = await User.findById(authReq.user.id).select('-password');
+        const user: IUser = await User.findById(req.user!.id).select('-password');
         if (!user) {
             res.status(404).json({ message: 'User not found' });
             return;
@@ -27,23 +31,17 @@ router.get('/profile', verifyToken, async (req: Request, res: Response, next: Ne
     }
 });
 
-router.post('/upload-avatar', verifyToken, uploadAvatar.single('avatar'),
+router.post('/avatar', verifyToken, uploadAvatar.single('avatar'),
     async (req: Request, res: Response, next: NextFunction): Promise<any> => {
         try {
-            const authReq: AuthRequest = req as AuthRequest;
-            if (!authReq.user) {
-                return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-            }
-
             if (!req.file) {
                 return res.status(400).json({ message: 'No file uploaded.' });
             }
 
             const imageBuffer: Buffer<ArrayBufferLike> = req.file.buffer;
             const fileType: FileTypeResult | undefined = await fileTypeFromBuffer(imageBuffer);
-            const allowedTypes: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 
-            if (!fileType || !allowedTypes.includes(fileType.mime)) {
+            if (!fileType || !allowedTypes.includes(fileType.mime as typeof allowedTypes[number])) {
                 return res.status(400).json({
                     message: 'Invalid image format. Please upload a valid image (JPEG, PNG, WebP).'
                 });
@@ -54,7 +52,7 @@ router.post('/upload-avatar', verifyToken, uploadAvatar.single('avatar'),
                 .jpeg({ quality: 85 })
                 .toBuffer();
 
-            const shortHash: string = crypto.createHash('md5').update(authReq.user.id).digest('hex').slice(0, 12);
+            const shortHash: string = crypto.createHash('md5').update(req.user!.id).digest('hex').slice(0, 12);
             const fileName: string = `avatar-${shortHash}.jpg`;
 
             const params: { Bucket: string, Key: string, Body: Buffer<ArrayBufferLike>, ContentType: string } = {
@@ -63,103 +61,78 @@ router.post('/upload-avatar', verifyToken, uploadAvatar.single('avatar'),
                 Body: processedImage,
                 ContentType: 'image/jpeg',
             };
+            await putObjectPromise(params);
 
-            s3.putObject(params, async (err: any, data: any): Promise<any> => {
-                if (err) return next(err);
+            const avatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/${fileName}`;
+            await User.findByIdAndUpdate(req.user!.id, { avatarUrl });
 
-                const avatarUrl: string = `${process.env.MINIO_ENDPOINT}/avatars/${fileName}`;
-
-                try {
-                    await User.findByIdAndUpdate(authReq.user!.id, { avatarUrl });
-
-                    return res.status(200).json({
-                        message: 'Avatar uploaded successfully.',
-                        avatarUrl,
-                    });
-                } catch (dbError) {
-                    return next(dbError);
-                }
+            return res.status(200).json({
+                message: 'Avatar uploaded successfully.',
+                avatarUrl,
             });
 
-        } catch (error) {
-            next(error);
+        } catch (err) {
+            next(err);
         }
     });
-router.put('/remove-avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+
+router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-        }
-        const defaultAvatarUrl: string = `${process.env.MINIO_ENDPOINT}/avatars/avatar-default.jpg`
-        await User.findByIdAndUpdate(authReq.user!.id, { avatarUrl: defaultAvatarUrl });
+
+        await User.findByIdAndUpdate(req.user!.id, { avatarUrl: defaultAvatarUrl });
+
         return res.status(200).json({
-            message: 'Avatar uploaded successfully.',
+            message: 'Avatar deleted successfully.',
             defaultAvatarUrl,
         });
-    } catch (dbError) {
-        return next(dbError);
+    } catch (err) {
+        return next(err);
     }
 });
-router.put('/update-display-name', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+router.put('/display-name', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-        }
         const { displayName } = req.body;
-        await User.findByIdAndUpdate(authReq.user!.id, { displayName });
+        await User.findByIdAndUpdate(req.user!.id, { displayName });
+
         return res.status(200).json({
             message: 'Display name updated successfully.',
         });
-    } catch (dbError) {
-        return next(dbError);
+    } catch (err) {
+        return next(err);
     }
 });
-router.put('/update-email', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+router.put('/email', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-        }
         const { email } = req.body;
-        await User.findByIdAndUpdate(authReq.user!.id, { email });
+        await User.findByIdAndUpdate(req.user!.id, { email });
+
         return res.status(200).json({
             message: 'Email updated successfully.',
         });
-    } catch (dbError) {
-        return next(dbError);
+    } catch (err) {
+        return next(err);
     }
 });
-router.put('/update-date-of-birth', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+router.put('/date-of-birth', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-        }
         const { dateOfBirth } = req.body;
-        await User.findByIdAndUpdate(authReq.user!.id, { dateOfBirth });
+        await User.findByIdAndUpdate(req.user!.id, { dateOfBirth });
+
         return res.status(200).json({
             message: 'Date of birth updated successfully.',
         });
-    } catch (dbError) {
-        return next(dbError);
+    } catch (err) {
+        return next(err);
     }
 });
-router.put('/update-username', verifyToken, async (req: Request, res: Response): Promise<any> => {
+
+router.put('/username', verifyToken, async (req: Request, res: Response): Promise<any> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-        }
 
         const { currentPassword, newUsername } = req.body;
-        const user: IUser | null = await User.findById(authReq.user.id!);
-        if (!user) {
-            return res.status(404).json({ error: "user_not_found", message: "User not found." });
-        }
+        const user: IUser | null = await User.findById(req.user!.id);
 
-        const passwordValid: boolean = await bcrypt.compare(currentPassword, user.password);
+        const passwordValid: boolean = await bcrypt.compare(currentPassword, user!.password);
         if (!passwordValid) {
             return res.status(403).json({ error: "invalid_password", message: "Incorrect password." });
         }
@@ -168,35 +141,30 @@ router.put('/update-username', verifyToken, async (req: Request, res: Response):
         if (usernameTaken) {
             return res.status(409).json({ error: "username_taken", message: "Username is already taken." });
         }
-        user.username = newUsername;
-        await user.save();
+        user!.username = newUsername;
+        await user!.save();
         res.status(200).json({ message: "Username updated successfully." });
 
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: "server_error", message: "Something went wrong." });
     }
 });
-router.put('/update-password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+
+router.put('/password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
     try {
-        const authReq: AuthRequest = req as AuthRequest;
-        if (!authReq.user) {
-            return res.status(401).json({ message: 'Unauthorized. Log in first.' });
-        }
         const { currentPassword, newPassword } = req.body;
-        const user: IUser | null = await User.findById(authReq.user.id!);
-        if (!user) {
-            return res.status(404).json({ error: "user_not_found", message: "User not found." });
-        }
-        const passwordValid: boolean = await bcrypt.compare(currentPassword, user.password);
+        const user: IUser | null = await User.findById(req.user!.id);
+
+        const passwordValid: boolean = await bcrypt.compare(currentPassword, user!.password);
         if (!passwordValid) {
             return res.status(403).json({ error: "invalid_password", message: "Incorrect password." });
         }
-        user.password = newPassword;
-        await user.save();
+
+        user!.password = newPassword;
+        await user!.save();
         res.status(200).json({ message: "Password updated successfully." });
-    } catch (dbError) {
-        return next(dbError);
+    } catch (err) {
+        return next(err);
     }
 });
 

@@ -1,5 +1,6 @@
 import { BackendApi } from "@/api/base.ts";
 import { AxiosError, AxiosResponse } from "axios";
+import { Dayjs } from "dayjs";
 
 export interface User {
     id: string;
@@ -25,64 +26,106 @@ class UserApi extends BackendApi {
     }
 
     async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
-        const formData = new FormData();
-        formData.append('avatar', file);
+        try {
+            const formData = new FormData();
+            formData.append('avatar', file);
 
-        const res: AxiosResponse = await this.backend.post('upload-avatar', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
-        return res.data;
+            const res = await this.backend.post('avatar', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            return res.data;
+        } catch (err: unknown) {
+            if (err instanceof AxiosError) {
+                throw new Error(err.response?.data?.error);
+            }
+
+            throw new Error('unknown_error');
+        }
     }
 
     async removeAvatar(): Promise<{ avatarUrl: string }> {
-        const res: AxiosResponse = await this.backend.put('remove-avatar');
-        return res.data;
+        try {
+            const res = await this.backend.delete('avatar');
+            return res.data;
+        } catch (err: unknown) {
+            if (err instanceof AxiosError) {
+                throw new Error(err.response?.data?.error);
+            }
+
+            throw new Error('unknown_error');
+        }
+
     }
 
     async updateDisplayName(displayName: string): Promise<{ message: string }> {
-        const res: AxiosResponse = await this.backend.put('update-display-name', { displayName });
-        return res.data;
+        try {
+            const res: AxiosResponse = await this.backend.put('display-name', { displayName });
+            return res.data;
+        } catch (err: unknown) {
+            if (err instanceof AxiosError) {
+                throw new Error(err.response?.data?.error);
+            }
+
+            throw new Error('unknown_error');
+        }
     }
 
     async updateEmail(email: string): Promise<{ message: string }> {
-        const res: AxiosResponse = await this.backend.put('update-email', { email });
-        return res.data;
+        try {
+            const res: AxiosResponse = await this.backend.put('email', { email });
+            return res.data;
+        } catch (err: unknown) {
+            if (err instanceof AxiosError) {
+                throw new Error(err.response?.data?.error);
+            }
+
+            throw new Error('unknown_error');
+        }
+
     }
 
-    async updateDateOfBirth(dateOfBirth: string): Promise<{ message: string }> {
-        const res: AxiosResponse = await this.backend.put('update-date-of-birth', { dateOfBirth });
-        return res.data;
+    async updateDateOfBirth(dateOfBirth: Dayjs | Date): Promise<{ message: string }> {
+        try {
+            const isoString = dateOfBirth instanceof Date ? dateOfBirth.toISOString() : dateOfBirth.toISOString();
+            const res: AxiosResponse = await this.backend.put('date-of-birth', { dateOfBirth: isoString });
+            return res.data;
+        } catch (err: unknown) {
+            if (err instanceof AxiosError) {
+                throw new Error(err.response?.data?.error);
+            }
+
+            throw new Error('unknown_error');
+        }
     }
 
     async updateUsername(currentPassword: string, newUsername: string): Promise<{ message: string }> {
         try {
-            const res: AxiosResponse = await this.backend.put('update-username', {
+            const res: AxiosResponse = await this.backend.put('username', {
                 currentPassword,
                 newUsername,
             });
             return res.data;
         } catch (err: unknown) {
             if (err instanceof AxiosError) {
-                const apiError: { error?: string } = err.response?.data as { error?: string };
-                throw new Error(apiError?.error || 'unknown_error');
+                throw new Error(err.response?.data?.error);
             }
 
             throw new Error('unknown_error');
         }
     }
+
     async updatePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
         try {
-            const res: AxiosResponse = await this.backend.put('update-password', {
+            const res: AxiosResponse = await this.backend.put('password', {
                 currentPassword,
                 newPassword,
             });
             return res.data;
         } catch (err: unknown) {
             if (err instanceof AxiosError) {
-                const apiError: { error?: string } = err.response?.data as { error?: string };
-                throw new Error(apiError?.error || 'unknown_error');
+                throw new Error(err.response?.data?.error);
             }
             throw new Error('unknown_error');
         }
