@@ -16,7 +16,6 @@ import { userApi } from "@/api/parts/user.ts";
 import { twoFAApi } from "@/api/parts/2fa.ts";
 import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
 import axios from "axios";
-import { AxiosError } from "axios";
 
 interface UpdatePasswordProps {
     open: boolean;
