@@ -188,7 +188,7 @@ const MyAccount: React.FC = () => {
                                     <Typography variant='h6'>Username</Typography>
                                     <Typography variant='body1'> {user.username}</Typography>
                                 </Stack>
-                                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} is2FAEnabled={user.is2FAEnabled}/>
+                                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                                 <Button variant='contained'
                                         onClick={handleUsernameOpen}>Edit</Button>
                             </Stack>
@@ -207,7 +207,7 @@ const MyAccount: React.FC = () => {
                                     <Typography variant='h6'>Email</Typography>
                                     <Typography variant='body1'> {user.email}</Typography>
                                 </Stack>
-                                <UpdateEmail open={emailOpen} handleClose={onEmailClose} is2FAEnabled={user.is2FAEnabled}/>
+                                <UpdateEmail open={emailOpen} handleClose={onEmailClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                                 <Button variant='contained'
                                         onClick={handleEmailOpen}>Edit</Button>
                             </Stack>
@@ -227,19 +227,19 @@ const MyAccount: React.FC = () => {
                                     avatar</Button>
                             </Stack>
                             <Typography variant='h5'>Password and Authentication</Typography>
-                            {!user.is2FAEnabled && (
+                            {!user.isTwoFAEnabled && (
                                 <Stack direction='row' spacing={1}>
                                     <LockOpenIcon color='error'/>
                                     <Typography variant='h6' color='error'>Two Factor Authentication is not enabled.</Typography>
                                 </Stack>
                             )}
-                            {user.is2FAEnabled && (
+                            {user.isTwoFAEnabled && (
                                 <Stack direction='row' spacing={1}>
                                     <LockIcon color='success'/>
                                     <Typography variant='h6' color='success'>Two Factor Authentication is enabled.</Typography>
                                 </Stack>
                             )}
-                            {!user.is2FAEnabled && (
+                            {!user.isTwoFAEnabled && (
                                 <Stack direction='row'>
                                     <Enable2FADialog
                                         open={twoFAOpen}
@@ -248,7 +248,7 @@ const MyAccount: React.FC = () => {
                                     <Button variant='contained' onClick={handleTwoFAOpen}>Add Authenticator App</Button>
                                 </Stack>
                             )}
-                            {user.is2FAEnabled && (
+                            {user.isTwoFAEnabled && (
                                 <Stack direction='row'>
                                     <Disable2FADialog
                                         open={disableTwoFAOpen}
@@ -258,7 +258,7 @@ const MyAccount: React.FC = () => {
                                 </Stack>
                             )}
                             <Stack direction='row' justifyContent='space-between'>
-                                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} is2FAEnabled={user.is2FAEnabled}/>
+                                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                                 <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
                                     Change password
                                 </Button>

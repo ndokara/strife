@@ -9,7 +9,7 @@ export interface User {
     username: string;
     dateOfBirth: Date;
     avatarUrl: string;
-    is2FAEnabled: boolean;
+    isTwoFAEnabled: boolean;
 }
 
 class UserApi extends BackendApi {

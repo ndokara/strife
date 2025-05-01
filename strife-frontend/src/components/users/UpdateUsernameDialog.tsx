@@ -20,10 +20,10 @@ import axios from "axios";
 interface UpdateUsernameProps {
     open: boolean;
     handleClose: () => void;
-    is2FAEnabled: boolean;
+    isTwoFAEnabled: boolean;
 }
 
-export default function UpdateUsername({ open, handleClose, is2FAEnabled}: UpdateUsernameProps) {
+export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: UpdateUsernameProps) {
     const [username, setUsername] = useState<string>("");
     const [password, setPassword] = useState<string>("");
     const [token, setToken] = useState<string>("");
@@ -73,7 +73,7 @@ export default function UpdateUsername({ open, handleClose, is2FAEnabled}: Updat
             setUsernameError(false);
             setUsernameErrorMessage("");
         }
-        if(is2FAEnabled && token.length < 6){
+        if(isTwoFAEnabled && token.length < 6){
             setCodeError(true);
         }
         else{
@@ -83,7 +83,7 @@ export default function UpdateUsername({ open, handleClose, is2FAEnabled}: Updat
         if (!isValid) return;
 
         try {
-            if(is2FAEnabled){
+            if(isTwoFAEnabled){
                 await twoFAApi.verifyTwoFAToken(token);
             }
             await userApi.updateUsername(password, username);
@@ -91,25 +91,28 @@ export default function UpdateUsername({ open, handleClose, is2FAEnabled}: Updat
             resetFields();
             handleClose();
         } catch (err: unknown) {
+            let errorCode;
             if(axios.isAxiosError(err)){
-                const errorCode = err.message;
-
-                switch (errorCode) {
-                    case "invalid_password":
-                        setPasswordError(true);
-                        setPasswordErrorMessage("Incorrect password.");
-                        break;
-                    case "username_taken":
-                        setUsernameError(true);
-                        setUsernameErrorMessage("This username is already taken.");
-                        break;
-                    case "invalid_token":
-                        setCodeError(true);
-                        break;
-                    default:
-                        setUsernameError(true);
-                        setUsernameErrorMessage("Something went wrong. Please try again.");
-                }
+                errorCode = err.response?.data?.error;
+            }
+            else if (err instanceof Error){
+                errorCode = err.message;
+            }
+            switch (errorCode) {
+                case "invalid_password":
+                    setPasswordError(true);
+                    setPasswordErrorMessage("Incorrect password.");
+                    break;
+                case "username_taken":
+                    setUsernameError(true);
+                    setUsernameErrorMessage("This username is already taken.");
+                    break;
+                case "invalid_token":
+                    setCodeError(true);
+                    break;
+                default:
+                    setUsernameError(true);
+                    setUsernameErrorMessage("Something went wrong. Please try again.");
             }
         }
     };
@@ -147,7 +150,7 @@ export default function UpdateUsername({ open, handleClose, is2FAEnabled}: Updat
                     />
                     {passwordError && <FormHelperText>{passwordErrorMessage}</FormHelperText>}
                 </FormControl>
-                {is2FAEnabled && (
+                {isTwoFAEnabled && (
                     <VerificationCodeInput
                         value={token}
                         onChange={(value) => {

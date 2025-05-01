@@ -20,10 +20,10 @@ import axios from "axios";
 interface UpdatePasswordProps {
     open: boolean;
     handleClose: () => void;
-    is2FAEnabled: boolean;
+    isTwoFAEnabled: boolean;
 }
 
-export default function UpdatePassword({ open, handleClose, is2FAEnabled}: UpdatePasswordProps) {
+export default function UpdatePassword({ open, handleClose, isTwoFAEnabled}: UpdatePasswordProps) {
     const [currentPassword, setCurrentPassword] = useState<string>("");
     const [newPassword, setNewPassword] = useState<string>("");
     const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -84,7 +84,7 @@ export default function UpdatePassword({ open, handleClose, is2FAEnabled}: Updat
             setConfirmPasswordError(false);
             setConfirmPasswordErrorMessage("");
         }
-        if(is2FAEnabled && token.length < 6){
+        if(isTwoFAEnabled && token.length < 6){
             setCodeError(true);
         }
         else{
@@ -94,7 +94,7 @@ export default function UpdatePassword({ open, handleClose, is2FAEnabled}: Updat
         if (!isValid) return;
 
         try {
-            if(is2FAEnabled){
+            if(isTwoFAEnabled){
                 await twoFAApi.verifyTwoFAToken(token);
             }
             await userApi.updatePassword(currentPassword, confirmPassword);
@@ -157,7 +157,7 @@ export default function UpdatePassword({ open, handleClose, is2FAEnabled}: Updat
                     />
                     {currentPasswordError && <FormHelperText>{currentPasswordErrorMessage}</FormHelperText>}
                 </FormControl>
-                {is2FAEnabled && (
+                {isTwoFAEnabled && (
                     <VerificationCodeInput
                         value={token}
                         onChange={(value) => {

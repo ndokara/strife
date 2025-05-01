@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { twoFAApi } from "@/api/parts/2fa.ts";
 import VerificationCodeInput from "@/components/2fa/VerificationCodeInput.tsx";
+import axios from "axios";
 
 interface Enable2FADialogProps {
     open: boolean;
@@ -55,10 +56,13 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
             setLoading(true);
             setError('');
             await twoFAApi.verifyTwoFASetup(token);
+
             onSuccess?.();
             onClose();
-        } catch (err) {
-            setCodeError(true);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setCodeError(true);
+            }
         } finally {
             setLoading(false);
         }

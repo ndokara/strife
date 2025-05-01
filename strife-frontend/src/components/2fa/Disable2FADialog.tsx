@@ -32,24 +32,29 @@ const Disable2FADialog: React.FC<Disable2FADialogProps> = ({ open, onClose, onSu
         setPasswordError('');
 
         try {
-            // Step 1: Verify 2FA token
             await twoFAApi.verifyTwoFAToken(token);
-
-            // Step 2: Attempt to remove 2FA
             await twoFAApi.removeTwoFA(password);
 
-            // Success
             onSuccess?.();
             onClose();
         } catch (err: unknown) {
-            if(axios.isAxiosError(err)){
-                if (err.response?.status === 400 && err.response.data?.message === 'Incorrect password.') {
-                    setPasswordError('Incorrect password.');
-                } else if (err.response?.status === 400 && err.response.data?.message === 'Invalid 2FA token') {
+
+            let errorCode;
+            if (axios.isAxiosError(err)) {
+                errorCode = err.response?.data?.error;
+            } else if (err instanceof Error) {
+                errorCode = err.message;
+            }
+
+            switch (errorCode) {
+                case "invalid_password":
+                    setPasswordError("Incorrect password.");
+                    break;
+                case "invalid_token":
                     setCodeError(true);
-                } else {
-                    setPasswordError('Failed to remove 2FA.');
-                }
+                    break;
+                default:
+                    setPasswordError("Something went wrong. Please try again.");
             }
         } finally {
             setLoading(false);
