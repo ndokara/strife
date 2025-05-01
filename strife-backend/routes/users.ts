@@ -68,16 +68,19 @@ router.post('/avatar', verifyToken, uploadAvatar.single('avatar'),
       const avatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/${fileName}`;
       await User.findByIdAndUpdate(req.user!.id, { avatarUrl });
 
-      res.status(200).json({
+      return res.status(200).json({
         message: 'Avatar uploaded successfully.',
         avatarUrl,
       });
+
     } catch (err) {
       next(err);
     }
   });
-router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+
+router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
+
     await User.findByIdAndUpdate(req.user!.id, { avatarUrl: defaultAvatarUrl });
 
     res.status(200).json({
@@ -128,8 +131,10 @@ router.put('/date-of-birth', verifyToken, async (req: Request, res: Response, ne
     return next(err);
   }
 });
-router.put('/username', verifyToken, async (req: Request, res: Response): Promise<void> => {
+
+router.put('/username', verifyToken, async (req: Request, res: Response): Promise<any> => {
   try {
+
     const { currentPassword, newUsername } = req.body;
     const user: IUser | null = await User.findById(req.user!.id);
 
@@ -152,10 +157,10 @@ router.put('/username', verifyToken, async (req: Request, res: Response): Promis
   }
 });
 
-router.put('/password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const user: IUser | null = await User.findById(req.user!.id!);
+    const user: IUser | null = await User.findById(req.user!.id);
 
     const passwordValid: boolean = await bcrypt.compare(currentPassword, user!.password);
     if (!passwordValid) {

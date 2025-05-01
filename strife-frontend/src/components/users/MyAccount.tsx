@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigateFunction, useNavigate } from 'react-router';
 import { User, userApi } from '@/api/parts/user.ts';
+import { isApiError } from '@/api/core.ts';
 import { authApi } from '@/api/parts/auth.ts';
+import { HttpStatusCode } from '@/api/http.ts';
 import ImageCropper from '@/components/ImageCropper.tsx';
 import { Avatar, Button, Card, CardContent, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
@@ -11,6 +13,10 @@ import UpdateEmail from '@/components/users/UpdateEmailDialog.tsx';
 import UpdateDateOfBirth from '@/components/users/UpdateDateOfBirthDialog.tsx';
 import UpdateUsername from '@/components/users/UpdateUsernameDialog.tsx';
 import UpdatePassword from '@/components/users/UpdatePasswordDialog.tsx';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import LockIcon from '@mui/icons-material/Lock';
+import Enable2FADialog from '@/components/2fa/Enable2FADialog.tsx';
+import Disable2FADialog from '@/components/2fa/Disable2FADialog.tsx';
 
 const MyAccount: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -23,6 +29,23 @@ const MyAccount: React.FC = () => {
   const [dateOfBirthOpen, setDateOfBirthOpen] = React.useState(false);
   const [usernameOpen, setUsernameOpen] = React.useState(false);
   const [passwordOpen, setPasswordOpen] = React.useState(false);
+  const [twoFAOpen, setTwoFAOpen] = React.useState(false);
+  const [disableTwoFAOpen, setDisableTwoFAOpen] = React.useState(false);
+
+  const handleTwoFAOpen = () =>{
+    setTwoFAOpen(true);
+  };
+  const handleTwoFAClose = () =>{
+    setTwoFAOpen(false);
+    fetchProfile();
+  };
+  const handleDisableTwoFAOpen = () =>{
+    setDisableTwoFAOpen(true);
+  };
+  const handleDisableTwoFAClose = () =>{
+    setDisableTwoFAOpen(false);
+    fetchProfile();
+  };
 
   const handleUsernameOpen = () => {
     setUsernameOpen(true);
@@ -64,16 +87,21 @@ const MyAccount: React.FC = () => {
     fetchProfile();
   };
 
-  const fetchProfile = useCallback(async (): Promise<void> => {
+  const fetchProfile = async (): Promise<void> => {
     try {
       const user = await userApi.getProfile();
       setUser(user);
       setAvatarUrl(`${user.avatarUrl}?t=${Date.now()}`);
     } catch (err: unknown) {
+      if (isApiError(err) && err.response?.status === HttpStatusCode.UNAUTHORIZED) {
+        setError('Unauthorized. Please log in.');
+      } else {
+        setError('An unexpected error occurred.');
+      }
       console.error('Error fetching profile:', err);
       navigate('/login');
     }
-  }, [navigate]);
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -160,7 +188,7 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Username</Typography>
                   <Typography variant='body1'> {user.username}</Typography>
                 </Stack>
-                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose}/>
+                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                 <Button variant='contained'
                   onClick={handleUsernameOpen}>Edit</Button>
               </Stack>
@@ -179,7 +207,7 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Email</Typography>
                   <Typography variant='body1'> {user.email}</Typography>
                 </Stack>
-                <UpdateEmail open={emailOpen} handleClose={onEmailClose}/>
+                <UpdateEmail open={emailOpen} handleClose={onEmailClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                 <Button variant='contained'
                   onClick={handleEmailOpen}>Edit</Button>
               </Stack>
@@ -199,8 +227,38 @@ const MyAccount: React.FC = () => {
                                     avatar</Button>
               </Stack>
               <Typography variant='h5'>Password and Authentication</Typography>
+              {!user.isTwoFAEnabled && (
+                <Stack direction='row' spacing={1}>
+                  <LockOpenIcon color='error'/>
+                  <Typography variant='h6' color='error'>Two Factor Authentication is not enabled.</Typography>
+                </Stack>
+              )}
+              {user.isTwoFAEnabled && (
+                <Stack direction='row' spacing={1}>
+                  <LockIcon color='success'/>
+                  <Typography variant='h6' color='success'>Two Factor Authentication is enabled.</Typography>
+                </Stack>
+              )}
+              {!user.isTwoFAEnabled && (
+                <Stack direction='row'>
+                  <Enable2FADialog
+                    open={twoFAOpen}
+                    onClose={handleTwoFAClose}
+                  />
+                  <Button variant='contained' onClick={handleTwoFAOpen}>Add Authenticator App</Button>
+                </Stack>
+              )}
+              {user.isTwoFAEnabled && (
+                <Stack direction='row'>
+                  <Disable2FADialog
+                    open={disableTwoFAOpen}
+                    onClose={handleDisableTwoFAClose}
+                  />
+                  <Button variant='contained' color='error' onClick={handleDisableTwoFAOpen}>Remove Authenticator App</Button>
+                </Stack>
+              )}
               <Stack direction='row' justifyContent='space-between'>
-                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose}/>
+                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                 <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
                                     Change password
                 </Button>

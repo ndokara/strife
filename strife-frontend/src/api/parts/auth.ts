@@ -3,6 +3,7 @@ import { Dayjs } from 'dayjs';
 
 export interface LoginResponse {
     accessToken: string;
+    tempToken?: string;
 }
 
 export interface RegisterResponse {
@@ -42,6 +43,10 @@ class AuthApi extends BackendApi {
 
   async logout(): Promise<LogOutResponse> {
     const res = await this.backend.post('logout');
+    return res.data;
+  }
+  async verify2FAOnLogin(code: string, tempToken: string): Promise<LoginResponse> {
+    const res = await this.backend.post('verify-2fa-onlogin', {code, tempToken});
     return res.data;
   }
 }
