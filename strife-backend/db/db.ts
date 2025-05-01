@@ -1,5 +1,7 @@
 import { connect } from 'mongoose';
-require('dotenv').config();
+import { config } from 'dotenv';
+
+config();
 
 export async function connectDb() {
   const mongoUri = process.env.MONGO_URI;
