@@ -68,7 +68,7 @@ router.post('/avatar', verifyToken, uploadAvatar.single('avatar'),
       const avatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/${fileName}`;
       await User.findByIdAndUpdate(req.user!.id, { avatarUrl });
 
-      return res.status(200).json({
+      res.status(200).json({
         message: 'Avatar uploaded successfully.',
         avatarUrl,
       });
@@ -78,16 +78,15 @@ router.post('/avatar', verifyToken, uploadAvatar.single('avatar'),
     }
   });
 
-router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-
     await User.findByIdAndUpdate(req.user!.id, { avatarUrl: defaultAvatarUrl });
 
     res.status(200).json({
       message: 'Avatar deleted successfully.',
       defaultAvatarUrl,
     });
-    return;
+
   } catch (err) {
     return next(err);
   }
@@ -132,7 +131,7 @@ router.put('/date-of-birth', verifyToken, async (req: Request, res: Response, ne
   }
 });
 
-router.put('/username', verifyToken, async (req: Request, res: Response): Promise<any> => {
+router.put('/username', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
 
     const { currentPassword, newUsername } = req.body;
@@ -147,6 +146,7 @@ router.put('/username', verifyToken, async (req: Request, res: Response): Promis
     const usernameTaken: { _id: unknown } | null = await User.exists({ username: newUsername });
     if (usernameTaken) {
       res.status(409).json({ error: 'username_taken', message: 'Username is already taken.' });
+      return;
     }
     user!.username = newUsername;
     await user!.save();
@@ -157,7 +157,7 @@ router.put('/username', verifyToken, async (req: Request, res: Response): Promis
   }
 });
 
-router.put('/password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+router.put('/password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user: IUser | null = await User.findById(req.user!.id);

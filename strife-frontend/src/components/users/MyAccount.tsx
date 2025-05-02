@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { NavigateFunction, useNavigate } from 'react-router';
 import { User, userApi } from '@/api/parts/user.ts';
 import { isApiError } from '@/api/core.ts';
@@ -87,7 +87,7 @@ const MyAccount: React.FC = () => {
     fetchProfile();
   };
 
-  const fetchProfile = async (): Promise<void> => {
+  const fetchProfile = useCallback(async (): Promise<void> => {
     try {
       const user = await userApi.getProfile();
       setUser(user);
@@ -101,11 +101,11 @@ const MyAccount: React.FC = () => {
       console.error('Error fetching profile:', err);
       navigate('/login');
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     fetchProfile();
-  }, [navigate, fetchProfile]);
+  }, [fetchProfile]);
 
   const handleLogout = async () => {
     try {

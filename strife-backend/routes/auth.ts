@@ -3,15 +3,22 @@ import express, { Request, Response } from 'express';
 import { createSecretToken } from '../middleware/generateToken';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
+import User, { IUser } from '../models/user';
 
 const router = express.Router();
 
-router.post('/register', async (req: Request, res: Response): Promise<any> => {
+interface TempTokenPayload extends jwt.JwtPayload {
+  userId: string;
+  step: string;
+}
+
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, displayName, username, password, dateOfBirth } = req.body;
     const existingUser: IUser | null = await User.findOne({ $or: [{ email }, { username }] }).exec();
     if (existingUser) {
-      return res.status(400).json({ message: 'Email or username already in use' });
+      res.status(400).json({ message: 'Email or username already in use' });
+      return;
     }
     const defaultAvatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
     const user: IUser = new User({
@@ -39,27 +46,29 @@ router.post('/register', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-router.post('/login', async (req: Request, res: Response): Promise<any> => {
+router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, password } = req.body;
     const user: IUser | null = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({ message: 'Invalid credentials.' });
+      res.status(400).json({ message: 'Invalid credentials.' });
+      return;
     }
 
     if (user.isTwoFAEnabled) {
       const tempToken: string = jwt.sign(
         { userId: user.id, step: '2fa' },
-                process.env.TOKEN_KEY!,
-                { expiresIn: '5m' }
+        process.env.TOKEN_KEY!,
+        { expiresIn: '5m' }
       );
 
-      return res.status(200).json({
+      res.status(200).json({
         message: '2FA required.',
         twoFARequired: true,
         tempToken,
       });
+      return;
     }
 
     const token: string = createSecretToken(user.id);
@@ -71,29 +80,39 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
       httpOnly: true,
     });
 
-    return res.json({ token: token, message: 'Login Successful.' });
+    res.json({ token: token, message: 'Login Successful.' });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
-router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<any> => {
+router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<void> => {
   const { code, tempToken } = req.body;
 
   if (!code || !tempToken) {
-    return res.status(400).json({ message: 'Missing code or tempToken.' });
+    res.status(400).json({ message: 'Missing code or tempToken.' });
+    return;
   }
 
   try {
-    const decoded: any = jwt.verify(tempToken, process.env.TOKEN_KEY!);
+    const decoded: string | jwt.JwtPayload = jwt.verify(tempToken, process.env.TOKEN_KEY!);
+    if (typeof decoded !== 'object' || !('userId' in decoded)) {
+      res.status(401).json({ message: 'Invalid token payload.' });
+      return;
+    }
 
-    const user: IUser | null = await User.findById(decoded.userId);
+    const { userId } = decoded as TempTokenPayload;
+    const user: IUser | null = await User.findById(userId);
+
+
     if (!user) {
-      return res.status(401).json({ message: 'Unauthorized.' });
+      res.status(401).json({ message: 'Unauthorized.' });
+      return;
     }
 
     if (!user.isTwoFAEnabled || !user.twoFASecret) {
-      return res.status(401).json({ message: '2FA not configured.' });
+      res.status(401).json({ message: '2FA not configured.' });
+      return;
     }
 
     const isVerified: boolean = speakeasy.totp.verify({
@@ -104,7 +123,8 @@ router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<
     });
 
     if (!isVerified) {
-      return res.status(401).json({ message: 'Invalid 2FA code.' });
+      res.status(401).json({ message: 'Invalid 2FA code.' });
+      return;
     }
 
     const accessToken = createSecretToken(user.id);
@@ -119,12 +139,13 @@ router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<
 
     res.status(200).json({ accessToken });
 
-  } catch (error: any) {
-    return res.status(401).json({ message: 'Invalid or expired temp token.' });
+  } catch (err: unknown) {
+    res.status(401).json({ message: 'Invalid or expired temp token.' });
+    return;
   }
 });
 
-router.post('/logout', (req: Request, res: Response, next: NextFunction): void => {
+router.post('/logout', (req: Request,res: Response): void => {
   try {
     res.clearCookie('token');
     res.json({ message: 'Logged out successfully.' });
