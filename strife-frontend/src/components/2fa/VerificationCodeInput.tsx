@@ -4,10 +4,10 @@ import Typography from '@mui/material/Typography';
 
 interface VerificationCodeInputProps {
     length?: number;
-    value: string; // single string like "123456"
+    value: string;
     onChange: (value: string) => void;
     onComplete?: (code: string) => void;
-    error?: boolean; // externally controlled error flag
+    error?: boolean;
 }
 
 const VerificationCodeInput: React.FC<VerificationCodeInputProps>
@@ -16,10 +16,8 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps>
       const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
       const paddedValue = value.padEnd(length, ''); // ensures we can safely index all digits
 
-      // Internal state to control when error should be shown visually
       const [localError, setLocalError] = useState(error);
 
-      // Sync local error state with external error
       useEffect(() => {
         setLocalError(error);
       }, [error]);
@@ -31,7 +29,6 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps>
         chars[index] = val;
         const newValue = chars.join('');
 
-        // Clear error on edit
         setLocalError(false);
         onChange(newValue);
 

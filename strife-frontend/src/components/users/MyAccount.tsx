@@ -5,7 +5,7 @@ import { isApiError } from '@/api/core.ts';
 import { authApi } from '@/api/parts/auth.ts';
 import { HttpStatusCode } from '@/api/http.ts';
 import ImageCropper from '@/components/ImageCropper.tsx';
-import { Avatar, Button, Card, CardContent, Stack } from '@mui/material';
+import { Avatar, Button, Card, CardContent, Popover, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import UpdateDisplayName from '@/components/users/UpdateDisplayNameDialog.tsx';
@@ -32,17 +32,19 @@ const MyAccount: React.FC = () => {
   const [twoFAOpen, setTwoFAOpen] = React.useState(false);
   const [disableTwoFAOpen, setDisableTwoFAOpen] = React.useState(false);
 
-  const handleTwoFAOpen = () =>{
+  const [popoverAnchor, setPopoverAnchor] = useState<null | HTMLElement>(null);
+
+  const handleTwoFAOpen = () => {
     setTwoFAOpen(true);
   };
-  const handleTwoFAClose = () =>{
+  const handleTwoFAClose = () => {
     setTwoFAOpen(false);
     fetchProfile();
   };
-  const handleDisableTwoFAOpen = () =>{
+  const handleDisableTwoFAOpen = () => {
     setDisableTwoFAOpen(true);
   };
-  const handleDisableTwoFAClose = () =>{
+  const handleDisableTwoFAClose = () => {
     setDisableTwoFAOpen(false);
     fetchProfile();
   };
@@ -70,14 +72,19 @@ const MyAccount: React.FC = () => {
     setDisplayNameOpen(false);
     fetchProfile();
   };
-  const handleEmailOpen = () => {
-    setEmailOpen(true);
+  const handleEmailOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (user?.googleId) {
+      setPopoverAnchor(event.currentTarget);
+    } else setEmailOpen(true);
   };
 
   const onEmailClose = () => {
     setEmailOpen(false);
     fetchProfile();
   };
+
+  const popoverClose = () => setPopoverAnchor(null);
+
   const handleDateOfBirthOpen = () => {
     setDateOfBirthOpen(true);
   };
@@ -104,6 +111,12 @@ const MyAccount: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('token');
+
+    if (token) {
+      localStorage.setItem('token', token);
+      window.history.replaceState(null, '', '/dashboard/myaccount');
+    }
     fetchProfile();
   }, [fetchProfile]);
 
@@ -121,6 +134,10 @@ const MyAccount: React.FC = () => {
     await userApi.removeAvatar();
     fetchProfile();
   };
+  const handleGoogleAvatar = async () => {
+    await userApi.googleAvatar();
+    fetchProfile();
+  };
 
   if (error) {
     return <div>{error}</div>;
@@ -134,17 +151,14 @@ const MyAccount: React.FC = () => {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        // alignItems: 'center',
         justifyContent: 'center',
         padding: 2,
         maxWidth: 1200,
         margin: 'auto',
       }}
     >
-      {/* Profile Card */}
       <Card sx={{ maxWidth: 600, width: '100%', marginBottom: 3 }}>
         <CardContent>
-          {/* Avatar Section */}
           <Stack direction="row" spacing={2} mb={3}>
             <Avatar
               alt={user.displayName}
@@ -156,7 +170,7 @@ const MyAccount: React.FC = () => {
                 {user.displayName}
               </Typography>
               <Typography variant="body1" color="textSecondary">
-                                @{user.username}
+                @{user.username}
               </Typography>
             </Stack>
           </Stack>
@@ -170,7 +184,7 @@ const MyAccount: React.FC = () => {
               <Typography variant='body1'>{user.dateOfBirth.toDateString()}</Typography>
             </Box>
             <Button variant="contained" onClick={handleLogout}>
-                            Log out
+              Log out
             </Button>
           </Stack>
         </CardContent>
@@ -180,7 +194,7 @@ const MyAccount: React.FC = () => {
         <Card sx={{ maxWidth: 600, width: '100%' }}>
           <CardContent>
             <Typography variant="h4" component="div" mb={2}>
-                            User profile
+              User profile
             </Typography>
             <Stack direction='column' spacing={1}>
               <Stack direction='row' justifyContent='space-between'>
@@ -188,7 +202,8 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Username</Typography>
                   <Typography variant='body1'> {user.username}</Typography>
                 </Stack>
-                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
+                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} isTwoFAEnabled={user.isTwoFAEnabled}
+                  isGoogleUser={!!user.googleId}/>
                 <Button variant='contained'
                   onClick={handleUsernameOpen}>Edit</Button>
               </Stack>
@@ -207,9 +222,26 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Email</Typography>
                   <Typography variant='body1'> {user.email}</Typography>
                 </Stack>
-                <UpdateEmail open={emailOpen} handleClose={onEmailClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
+                {!user.googleId && (
+                  <UpdateEmail open={emailOpen} handleClose={onEmailClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
+                )}
+
                 <Button variant='contained'
-                  onClick={handleEmailOpen}>Edit</Button>
+                  onClick={handleEmailOpen}>Edit
+                </Button>
+
+                <Popover
+                  open={Boolean(popoverAnchor)}
+                  anchorEl={popoverAnchor}
+                  onClose={popoverClose}
+                  anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                  transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                  <Typography sx={{ p: 2, maxWidth: 500 }}>
+                    Your email is linked to your Google profile and cannot be changed.
+                  </Typography>
+                </Popover>
+
               </Stack>
               <Stack direction='row' justifyContent='space-between'>
                 <Stack direction='column'>
@@ -223,10 +255,21 @@ const MyAccount: React.FC = () => {
               <Typography variant='h5'>Change Avatar</Typography>
               <Stack direction='row' justifyContent='space-between'>
                 <ImageCropper onAvatarUpdated={fetchProfile}/>
-                <Button variant='contained' color='error' onClick={handleRemoveAvatar}>Remove
-                                    avatar</Button>
+                {user.googleId && (
+                  <Button variant='contained' onClick={handleGoogleAvatar}>
+                    Use Google Avatar
+                  </Button>
+                )}
+                <Button variant='contained' color='error' onClick={handleRemoveAvatar}>
+                  Remove avatar
+                </Button>
               </Stack>
-              <Typography variant='h5'>Password and Authentication</Typography>
+              {!user.googleId && (
+                <Typography variant='h5'>Password and Authentication</Typography>
+              )}
+              {user.googleId && (
+                <Typography variant='h5'>Authentication</Typography>
+              )}
               {!user.isTwoFAEnabled && (
                 <Stack direction='row' spacing={1}>
                   <LockOpenIcon color='error'/>
@@ -254,15 +297,18 @@ const MyAccount: React.FC = () => {
                     open={disableTwoFAOpen}
                     onClose={handleDisableTwoFAClose}
                   />
-                  <Button variant='contained' color='error' onClick={handleDisableTwoFAOpen}>Remove Authenticator App</Button>
+                  <Button variant='contained' color='error' onClick={handleDisableTwoFAOpen}>Remove Authenticator
+                    App</Button>
                 </Stack>
               )}
-              <Stack direction='row' justifyContent='space-between'>
-                <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
-                <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
-                                    Change password
-                </Button>
-              </Stack>
+              {!user.googleId && (
+                <Stack direction='row' justifyContent='space-between'>
+                  <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
+                  <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
+                    Change password
+                  </Button>
+                </Stack>
+              )}
             </Stack>
           </CardContent>
         </Card>

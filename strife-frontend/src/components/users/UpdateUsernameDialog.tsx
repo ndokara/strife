@@ -21,9 +21,10 @@ interface UpdateUsernameProps {
     open: boolean;
     handleClose: () => void;
     isTwoFAEnabled: boolean;
+    isGoogleUser: boolean;
 }
 
-export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: UpdateUsernameProps) {
+export default function UpdateUsername({ open, handleClose, isTwoFAEnabled, isGoogleUser}: UpdateUsernameProps) {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [token, setToken] = useState<string>('');
@@ -33,6 +34,7 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
   const [codeError, setCodeError] = React.useState(false);
+
 
   const resetFields = () =>{
     setUsernameError(false);
@@ -56,7 +58,7 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
 
     let isValid = true;
 
-    if (!password.trim() || password.length < 6) {
+    if ((!password.trim() || password.length < 6) && !isGoogleUser) {
       setPasswordError(true);
       setPasswordErrorMessage('Password must be at least 6 characters long.');
       isValid = false;
@@ -137,19 +139,22 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
                     Enter your new username.
         </DialogContentText>
 
-        <FormControl fullWidth variant="outlined" error={passwordError}>
-          <InputLabel>Password</InputLabel>
-          <OutlinedInput
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Your current password"
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {passwordError && <FormHelperText>{passwordErrorMessage}</FormHelperText>}
-        </FormControl>
+        {!isGoogleUser && (
+          <FormControl fullWidth variant="outlined" error={passwordError}>
+            <InputLabel>Password</InputLabel>
+            <OutlinedInput
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Your current password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {passwordError && <FormHelperText>{passwordErrorMessage}</FormHelperText>}
+          </FormControl>
+        )}
+
         {isTwoFAEnabled && (
           <VerificationCodeInput
             value={token}

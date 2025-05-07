@@ -7,7 +7,6 @@ import { generateBrandedQRCode } from '../utils/brandedQRCode';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-
 router.post('/2fa-setup', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const user: IUser | null = await User.findById(req.user!.id).select('-password');
@@ -63,8 +62,8 @@ router.post('/2fa-setup-new', verifyToken, async (req: Request, res: Response, n
         newTwoFASecret: secret.base32,
         createdAt: Date.now()
       },
-            process.env.TOKEN_KEY as string,
-            { expiresIn: '5m' }
+      process.env.TOKEN_KEY as string,
+      { expiresIn: '5m' }
     );
     const qrCode: string = await generateBrandedQRCode(secret.otpauth_url!);
     res.json({ qrCode, tempToken: secretToken });
@@ -210,6 +209,10 @@ router.post('/remove-2fa', verifyToken, async (req: Request, res: Response, next
 
     if (!user) {
       res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    if(!user.password){
       return;
     }
 

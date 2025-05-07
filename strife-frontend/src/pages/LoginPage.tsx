@@ -8,7 +8,7 @@ import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
 import TextField from '@mui/material/TextField';
-import { Link as RouterLink, useNavigate } from 'react-router';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router';
 import Divider from '@mui/material/Divider';
 import StrifeLogo from '../theme/StrifeLogo.tsx';
 import ForgotPassword from '../components/auth/ForgotPasswordDialog.tsx';
@@ -18,6 +18,7 @@ import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
 import { AuthCard } from '@/components/auth/AuthCard.tsx';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { isAxiosError } from 'axios';
+import GoogleLoginButton from '@/components/auth/GoogleLoginButton.tsx';
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
 
@@ -38,6 +39,16 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const [loginError, setLoginError] = useState<string>('');
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  React.useEffect(() => {
+    const tokenFromUrl = searchParams.get('tempToken');
+    if (tokenFromUrl) {
+      setTempToken(tokenFromUrl);
+      setIs2FARequired(true);
+      localStorage.setItem('tempToken', tokenFromUrl);
+    }
+  }, [searchParams]);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -50,6 +61,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     try {
       const { accessToken } = await authApi.verify2FAOnLogin(code, tempToken);
       localStorage.setItem('accessToken', accessToken);
+      localStorage.removeItem('tempToken');
       navigate('/dashboard/myaccount');
     } catch (err: unknown) {
       if (isAxiosError(err)) {
@@ -94,11 +106,9 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
       const response: LoginResponse = await authApi.login(username, password);
 
       if ('token' in response) {
-        // No 2FA required
         localStorage.setItem('token', response.accessToken);
         navigate('/dashboard/myaccount');
       } else if ('tempToken' in response) {
-        // 2FA is required
         if (response.tempToken) {
           setTempToken(response.tempToken);
         }
@@ -173,7 +183,6 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
                   name="username"
                   placeholder="Your username"
                   autoComplete="username"
-                  // autoFocus
                   required
                   fullWidth
                   variant="outlined"
@@ -232,6 +241,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
               >
                 Log in
               </Button>
+              <GoogleLoginButton/>
               <Typography sx={{ textAlign: 'center' }}>
                 Don&apos;t have an account?{' '}
                 <Link component={RouterLink} to="/register" color="inherit">
@@ -245,17 +255,8 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
             <Typography component="h1" variant="h5">
               Enter 2FA Code
             </Typography>
-            {/*<TextField*/}
-            {/*    label="Verification Code"*/}
-            {/*    value={code}*/}
-            {/*    onChange={(e) => setCode(e.target.value)}*/}
-            {/*    error={!!codeError}*/}
-            {/*    helperText={codeError}*/}
-            {/*    fullWidth*/}
-            {/*/>*/}
             <VerificationCodeInput
               value={code}
-              // onChange={setCode}
               onChange={(code) => handleChangeCode(code)}
               onComplete={handle2FASubmit}
               error={codeError}

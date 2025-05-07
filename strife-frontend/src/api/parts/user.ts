@@ -10,6 +10,7 @@ export interface User {
     dateOfBirth: Date;
     avatarUrl: string;
     isTwoFAEnabled: boolean;
+    googleId: string;
 }
 
 class UserApi extends BackendApi {
@@ -57,6 +58,17 @@ class UserApi extends BackendApi {
       throw new Error('unknown_error');
     }
 
+  }
+  async googleAvatar(): Promise<{avatarUrl: string}> {
+    try{
+      const res = await this.backend.put('google-avatar');
+      return res.data;
+    } catch (err: unknown){
+      if(err instanceof AxiosError){
+        throw new Error(err.response?.data?.error);
+      }
+    }
+    throw new Error('unknown_error');
   }
 
   async updateDisplayName(displayName: string): Promise<{ message: string }> {

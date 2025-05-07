@@ -2,11 +2,12 @@
 import * as express from 'express';
 
 declare global {
-    namespace Express {
-        interface Request {
-            user?: {
-                id: string;
-            }
-        }
+  namespace Express {
+    interface User {
+      id?: string;
     }
+    interface AuthInfo {
+      registerToken?: string;
+    }
+  }
 }

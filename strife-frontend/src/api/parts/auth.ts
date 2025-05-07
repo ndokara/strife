@@ -35,6 +35,10 @@ class AuthApi extends BackendApi {
     const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth });
     return res.data;
   }
+  async completeRegistration(registerToken: string, dateOfBirth: Dayjs | Date): Promise<RegisterResponse> {
+    const res = await this.backend.post('complete-registration', {registerToken, dateOfBirth});
+    return res.data;
+  }
 
   async login(username: string, password: string): Promise<LoginResponse> {
     const res = await this.backend.post('login', { username, password });

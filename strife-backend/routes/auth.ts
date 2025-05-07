@@ -4,6 +4,7 @@ import { createSecretToken } from '../middleware/generateToken';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import User, { IUser } from '../models/user';
+import passport from 'passport';
 
 const router = express.Router();
 
@@ -11,6 +12,102 @@ interface TempTokenPayload extends jwt.JwtPayload {
   userId: string;
   step: string;
 }
+interface DecodedRegisterToken {
+  googleId: string;
+  googleAccessToken: string,
+  email: string;
+  displayName?: string;
+  username: string;
+  avatarUrl: string
+}
+
+router.post('/complete-registration', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { registerToken, dateOfBirth } = req.body;
+
+    if (!registerToken) {
+      res.status(400).json({ message: 'Missing register token.' });
+      return;
+    }
+    if(!dateOfBirth){
+      res.status(400).json({ message: 'Missing date of birth.' });
+      return;
+    }
+
+    let decoded: DecodedRegisterToken;
+    try {
+      decoded = jwt.verify(registerToken, process.env.TOKEN_KEY as string) as DecodedRegisterToken;
+    } catch (err) {
+      res.status(401).json({ message: 'Invalid or expired token.' });
+      return;
+    }
+
+    const {googleId, googleAccessToken, email, displayName, username, avatarUrl} = decoded;
+
+    const existingUser = await User.findOne({ $or: [{ email }, { googleId }] }).exec();
+    if (existingUser) {
+      res.status(400).json({ message: 'User already exists with this Google account or email.' });
+      return;
+    }
+
+    const user: IUser = new User({
+      googleId,
+      googleAccessToken,
+      email,
+      displayName,
+      username,
+      avatarUrl,
+      dateOfBirth,
+    });
+
+    await user.save();
+    const token = createSecretToken(user.id);
+
+    res.cookie('token', token, {
+      path: '/',
+      expires: new Date(Date.now() + 86400000),
+      secure: true,
+      httpOnly: true,
+    });
+
+    res.status(201).json({ message: 'Google user registered successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+}));
+
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, async (err, user, info) => {
+    if (err) {
+      console.error(err);
+      return res.redirect(`${process.env.FRONTEND_URL}/login`);
+    }
+
+    if (user) {
+      const token = createSecretToken(user.id);
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 86400000,
+      });
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard/myaccount`);
+    }
+
+    if (info?.registerToken) {
+      return res.redirect(`${process.env.FRONTEND_URL}/complete-registration?token=${info.registerToken}`);
+    }
+    if (info?.twoFARequired && info.tempToken) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?tempToken=${info.tempToken}`);
+    }
+
+    else return res.redirect(`${process.env.FRONTEND_URL}/login`);
+  })(req, res, next);
+});
 
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -31,7 +128,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     });
     await user.save();
 
-    const token = createSecretToken(user.id.toString());
+    const token = createSecretToken(user.id);
 
     res.cookie('token', token, {
       path: '/',
@@ -51,7 +148,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { username, password } = req.body;
     const user: IUser | null = await User.findOne({ username });
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !(await bcrypt.compare(password, user.password!))) {
       res.status(400).json({ message: 'Invalid credentials.' });
       return;
     }
@@ -73,7 +170,6 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     const token: string = createSecretToken(user.id);
     res.cookie('token', token, {
-      domain: process.env.frontend_url,
       path: '/',
       expires: new Date(Date.now() + 86400000),
       secure: true,
@@ -130,7 +226,6 @@ router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<
     const accessToken = createSecretToken(user.id);
 
     res.cookie('accessToken', accessToken, {
-      domain: process.env.frontend_url,
       path: '/',
       expires: new Date(Date.now() + 86400000),
       secure: true,
