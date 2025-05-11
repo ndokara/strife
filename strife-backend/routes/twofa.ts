@@ -34,6 +34,7 @@ router.post('/2fa-setup', verifyToken, async (req: Request, res: Response, next:
     next(err);
   }
 });
+
 router.post('/2fa-setup-new', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const user: IUser | null = await User.findById(req.user!.id).select('-password');

@@ -7,7 +7,7 @@ class TwoFAAPi extends BackendApi {
   }
 
   async twoFASetup(): Promise<{ qrCode: string; secret: string }> {
-    try{
+    try {
       const res = await this.backend.post('2fa-setup');
       return res.data;
 
@@ -22,8 +22,8 @@ class TwoFAAPi extends BackendApi {
   }
 
   async twoFASetupNew(email: string): Promise<{ qrCode: string; tempToken: string }> {
-    try{
-      const res = await this.backend.post('2fa-setup-new', {email});
+    try {
+      const res = await this.backend.post('2fa-setup-new', { email });
       return res.data;
 
     } catch (err: unknown) {
@@ -37,7 +37,7 @@ class TwoFAAPi extends BackendApi {
   }
 
   async verifyTwoFASetup(token: string): Promise<{ message: string }> {
-    try{
+    try {
       const res = await this.backend.post('verify-2fa-setup', { token });
       return res.data;
 
@@ -51,9 +51,9 @@ class TwoFAAPi extends BackendApi {
     }
   }
 
-  async verifyTwoFASetupAndUpdate(secretToken: string, newToken: string): Promise<{ message: string }>{
-    try{
-      const res = await this.backend.put('verify-2fa-setup-and-update', {secretToken, newToken});
+  async verifyTwoFASetupAndUpdate(secretToken: string, newToken: string): Promise<{ message: string }> {
+    try {
+      const res = await this.backend.put('verify-2fa-setup-and-update', { secretToken, newToken });
       return res.data;
 
     } catch (err: unknown) {

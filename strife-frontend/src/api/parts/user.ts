@@ -3,14 +3,14 @@ import { AxiosError, AxiosResponse } from 'axios';
 import { Dayjs } from 'dayjs';
 
 export interface User {
-    id: string;
-    email: string;
-    displayName: string;
-    username: string;
-    dateOfBirth: Date;
-    avatarUrl: string;
-    isTwoFAEnabled: boolean;
-    googleId: string;
+  id: string;
+  email: string;
+  displayName: string;
+  username: string;
+  dateOfBirth: Date;
+  avatarUrl: string;
+  isTwoFAEnabled: boolean;
+  googleId: string;
 }
 
 class UserApi extends BackendApi {
@@ -59,12 +59,13 @@ class UserApi extends BackendApi {
     }
 
   }
-  async googleAvatar(): Promise<{avatarUrl: string}> {
-    try{
+
+  async googleAvatar(): Promise<{ avatarUrl: string }> {
+    try {
       const res = await this.backend.put('google-avatar');
       return res.data;
-    } catch (err: unknown){
-      if(err instanceof AxiosError){
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
         throw new Error(err.response?.data?.error);
       }
     }

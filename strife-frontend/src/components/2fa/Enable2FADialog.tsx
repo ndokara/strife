@@ -13,9 +13,9 @@ import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import axios from 'axios';
 
 interface Enable2FADialogProps {
-    open: boolean;
-    onClose: () => void;
-    onSuccess?: () => void;
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSuccess }) => {
@@ -82,7 +82,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
         ) : step === 2 ? (
           <>
             <Typography mb={2}>
-                            Scan the QR code below with Google Authenticator or a compatible app:
+              Scan the QR code below with Google Authenticator or a compatible app:
             </Typography>
             {qrCode && (
               <img src={qrCode} alt="2FA QR Code" style={{ width: '100%', marginBottom: '1rem' }}/>
@@ -108,7 +108,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
-                    Cancel
+          Cancel
         </Button>
         <Button onClick={handleVerify} disabled={loading || token.length < 6}>
           {loading ? 'Verifying...' : 'Verify'}

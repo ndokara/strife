@@ -21,19 +21,19 @@ import { twoFAApi } from '@/api/parts/2fa.ts';
 import axios, { AxiosError } from 'axios';
 
 interface ForgotPasswordProps {
-    open: boolean;
-    handleClose: () => void;
-    isTwoFAEnabled: boolean;
+  open: boolean;
+  onClose: () => void;
+  isTwoFAEnabled: boolean;
 }
 
-export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: ForgotPasswordProps) {
+export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPasswordProps) {
   const [email, setEmail] = React.useState('');
-  const [token, setToken] = useState<string>('');
+  const [token, setToken] = useState('');
   const [newEmailError, setNewEmailError] = React.useState(false);
   const [newEmailErrorMessage, setNewEmailErrorMessage] = React.useState('');
   const [codeError, setCodeError] = React.useState(false);
 
-  const [newToken, setNewToken] = useState<string>('');
+  const [newToken, setNewToken] = useState('');
   const [newCodeError, setNewCodeError] = useState(false);
   const [qrCode, setQrCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,7 +63,7 @@ export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: Forgo
     setToken('');
     setCodeError(false);
     setShowSetupStep(false);
-    handleClose();
+    onClose();
   };
 
   const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -150,7 +150,7 @@ export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: Forgo
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={onClose}
       slotProps={{
         paper: {
           component: 'form',
@@ -162,7 +162,7 @@ export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: Forgo
       <DialogTitle>Change Email</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
         <DialogContentText>
-                    Enter your new email address.
+          Enter your new email address.
         </DialogContentText>
 
         <FormControl fullWidth variant="outlined" error={newEmailError}>
@@ -192,7 +192,7 @@ export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: Forgo
                 error={codeError}
               />
               <Button variant="contained" onClick={handleGenerateNew2FA} sx={{ mt: 2 }}>
-                                Generate New 2FA Setup
+                Generate New 2FA Setup
               </Button>
             </>
           )}
@@ -202,7 +202,7 @@ export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: Forgo
           {showSetupStep && !loading && (
             <>
               <Typography mb={2}>
-                                Scan the QR code below with Google Authenticator or a compatible app:
+                Scan the QR code below with Google Authenticator or a compatible app:
               </Typography>
               {qrCode && (
                 <img
@@ -232,7 +232,7 @@ export default function UpdateEmail({ open, handleClose, isTwoFAEnabled }: Forgo
         <Button onClick={handleCloseWithReset}>Cancel</Button>
         {!isContinueDisabled && (
           <Button variant="contained" type="submit">
-                        Continue
+            Continue
           </Button>)}
       </DialogActions>
     </Dialog>

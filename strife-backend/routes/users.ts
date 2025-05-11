@@ -10,7 +10,6 @@ import { processAndUploadAvatar } from '../utils/processUploadAvatar';
 
 const defaultAvatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg` as const;
 
-
 router.get('/profile', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const user: IUser = await User.findById(req.user!.id).select('-password');
@@ -42,7 +41,8 @@ router.post('/avatar', verifyToken, uploadAvatar.single('avatar'),
       });
 
     } catch (err) {
-      next(err);
+      console.error(err);
+      res.status(500).json({ message: 'Something went wrong.' });
     }
   });
 
@@ -60,8 +60,8 @@ router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: 
   }
 });
 
-router.put('/google-avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> =>{
-  try{
+router.put('/google-avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
     const user = await User.findById(req.user!.id);
     if (!user || !user.googleAccessToken) {
       res.status(403).json({ message: 'Google access token missing or user not found.' });
@@ -87,6 +87,7 @@ router.put('/google-avatar', verifyToken, async (req: Request, res: Response, ne
       res.status(400).json({ message: 'No avatar URL found in Google profile.' });
       return;
     }
+    // requesting 800x800 image
     googleAvatarUrl = googleAvatarUrl.replace(/=s\d+-c$/, '=s800-c');
     if (!/=s\d+-c$/.test(googleAvatarUrl)) {
       googleAvatarUrl += '=s800-c';
@@ -101,11 +102,10 @@ router.put('/google-avatar', verifyToken, async (req: Request, res: Response, ne
       message: 'Avatar uploaded successfully.',
       avatarUrl,
     });
-
-  } catch (err){
-    return next(err);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
-
 });
 
 router.put('/display-name', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -118,7 +118,8 @@ router.put('/display-name', verifyToken, async (req: Request, res: Response, nex
     });
     return;
   } catch (err) {
-    return next(err);
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 router.put('/email', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -131,7 +132,8 @@ router.put('/email', verifyToken, async (req: Request, res: Response, next: Next
     });
     return;
   } catch (err) {
-    return next(err);
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });return next(err);
   }
 });
 router.put('/date-of-birth', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -144,26 +146,26 @@ router.put('/date-of-birth', verifyToken, async (req: Request, res: Response, ne
     });
     return;
   } catch (err) {
-    return next(err);
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 
 router.put('/username', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
-
     const { currentPassword, newUsername } = req.body;
     const user: IUser | null = await User.findById(req.user!.id);
-    if(!user){
-      res.status(404).json({error: 'user_not_found', message: 'User not found.'});
+    if (!user) {
+      res.status(404).json({ error: 'user_not_found', message: 'User not found.' });
       return;
     }
 
-    if (!user!.password && !user!.googleId) {
-      res.status(403).json({error: 'no_password', message: 'Password is required.'});
+    if (!user.password && !user.googleId) {
+      res.status(403).json({ error: 'no_password', message: 'Password is required.' });
       return;
     }
-    if(user.password){
-      const passwordValid: boolean = await bcrypt.compare(currentPassword, user!.password!);
+    if (user.password) {
+      const passwordValid = await bcrypt.compare(currentPassword, user.password!);
       if (!passwordValid) {
         res.status(403).json({ error: 'invalid_password', message: 'Incorrect password.' });
         return;
@@ -175,10 +177,9 @@ router.put('/username', verifyToken, async (req: Request, res: Response): Promis
       res.status(409).json({ error: 'username_taken', message: 'Username is already taken.' });
       return;
     }
-    user!.username = newUsername;
-    await user!.save();
+    user.username = newUsername;
+    await user.save();
     res.status(200).json({ message: 'Username updated successfully.' });
-
   } catch {
     res.status(500).json({ error: 'server_error', message: 'Something went wrong.' });
   }
@@ -190,20 +191,22 @@ router.put('/password', verifyToken, async (req: Request, res: Response, next: N
     const user: IUser | null = await User.findById(req.user!.id);
 
     if (!user?.password) {
+      res.status(400);
       return;
     }
 
-    const passwordValid: boolean = await bcrypt.compare(currentPassword, user!.password);
+    const passwordValid = await bcrypt.compare(currentPassword, user!.password);
     if (!passwordValid) {
       res.status(403).json({ error: 'invalid_password', message: 'Incorrect password.' });
       return;
     }
 
-    user!.password = newPassword;
-    await user!.save();
+    user.password = newPassword;
+    await user.save();
     res.status(200).json({ message: 'Password updated successfully.' });
   } catch (err) {
-    return next(err);
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 

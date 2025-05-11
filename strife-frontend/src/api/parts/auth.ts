@@ -2,22 +2,22 @@ import { BackendApi } from '../base';
 import { Dayjs } from 'dayjs';
 
 export interface LoginResponse {
-    accessToken: string;
-    tempToken?: string;
+  accessToken: string;
+  tempToken?: string;
 }
 
 export interface RegisterResponse {
-    message: string;
-    accessToken: string;
+  message: string;
+  accessToken: string;
 }
 
 interface CheckCredentialsResponse {
-    emailExists: boolean;
-    usernameExists: boolean;
+  emailExists: boolean;
+  usernameExists: boolean;
 }
 
 interface LogOutResponse {
-    message: string;
+  message: string;
 }
 
 class AuthApi extends BackendApi {
@@ -35,8 +35,9 @@ class AuthApi extends BackendApi {
     const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth });
     return res.data;
   }
+
   async completeRegistration(registerToken: string, dateOfBirth: Dayjs | Date): Promise<RegisterResponse> {
-    const res = await this.backend.post('complete-registration', {registerToken, dateOfBirth});
+    const res = await this.backend.post('complete-registration', { registerToken, dateOfBirth });
     return res.data;
   }
 
@@ -49,8 +50,9 @@ class AuthApi extends BackendApi {
     const res = await this.backend.post('logout');
     return res.data;
   }
+
   async verify2FAOnLogin(code: string, tempToken: string): Promise<LoginResponse> {
-    const res = await this.backend.post('verify-2fa-onlogin', {code, tempToken});
+    const res = await this.backend.post('verify-2fa-onlogin', { code, tempToken });
     return res.data;
   }
 }

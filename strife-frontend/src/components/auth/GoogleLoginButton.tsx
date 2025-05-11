@@ -4,8 +4,7 @@ import { SvgIconProps } from '@mui/material/SvgIcon'; // Optional icon
 
 const GoogleLoginButton = () => {
   const handleGoogleLogin = () => {
-    //TODO: get rid of addresses like here. process.env?
-    window.location.href = 'http://localhost:3000/api/auth/google';
+    window.location.href = `${import.meta.env.VITE_BACKEND_BASE_URL}/api/auth/google}`;
   };
   const GoogleIcon = (props: SvgIconProps) => (
     <SvgIcon {...props} viewBox="0 0 533.5 544.3">
@@ -33,8 +32,7 @@ const GoogleLoginButton = () => {
       variant="contained"
       startIcon={<GoogleIcon/>}
       onClick={handleGoogleLogin}
-      sx={{
-      }}
+      sx={{}}
     >
       Sign in with Google
     </Button>

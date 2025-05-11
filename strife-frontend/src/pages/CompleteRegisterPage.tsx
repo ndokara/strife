@@ -43,6 +43,8 @@ const CompleteRegisterPage = (props: { disableCustomTheme?: boolean }) => {
       return;
     }
 
+    // TODO: duplicate code
+
     const today = dayjs();
     const minAgeDate = today.subtract(13, 'years');
     const minValidDate = today.subtract(100, 'years');
@@ -66,11 +68,9 @@ const CompleteRegisterPage = (props: { disableCustomTheme?: boolean }) => {
     }
 
     try {
-
       const { accessToken } = await authApi.completeRegistration(registerToken!, dateOfBirth);
       localStorage.setItem('accessToken', accessToken);
       navigate('/dashboard/myaccount');
-
     } catch (err) {
       console.error(err);
       setDateOfBirthError(true);

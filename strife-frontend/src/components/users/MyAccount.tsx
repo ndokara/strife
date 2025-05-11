@@ -202,7 +202,7 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Username</Typography>
                   <Typography variant='body1'> {user.username}</Typography>
                 </Stack>
-                <UpdateUsername open={usernameOpen} handleClose={onUsernameClose} isTwoFAEnabled={user.isTwoFAEnabled}
+                <UpdateUsername open={usernameOpen} onClose={onUsernameClose} isTwoFAEnabled={user.isTwoFAEnabled}
                   isGoogleUser={!!user.googleId}/>
                 <Button variant='contained'
                   onClick={handleUsernameOpen}>Edit</Button>
@@ -212,7 +212,7 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Display name</Typography>
                   <Typography variant='body1'> {user.displayName}</Typography>
                 </Stack>
-                <UpdateDisplayName open={displayNameOpen} handleClose={onDisplayNameClose}
+                <UpdateDisplayName open={displayNameOpen} onClose={onDisplayNameClose}
                   username={user.username}/>
                 <Button variant='contained'
                   onClick={handleDisplayNameOpen}>Edit</Button>
@@ -223,7 +223,7 @@ const MyAccount: React.FC = () => {
                   <Typography variant='body1'> {user.email}</Typography>
                 </Stack>
                 {!user.googleId && (
-                  <UpdateEmail open={emailOpen} handleClose={onEmailClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
+                  <UpdateEmail open={emailOpen} onClose={onEmailClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
                 )}
 
                 <Button variant='contained'
@@ -248,7 +248,7 @@ const MyAccount: React.FC = () => {
                   <Typography variant='h6'>Date of Birth</Typography>
                   <Typography variant='body1'> {user.dateOfBirth.toDateString()}</Typography>
                 </Stack>
-                <UpdateDateOfBirth open={dateOfBirthOpen} handleClose={onDateOfBirthClose}/>
+                <UpdateDateOfBirth open={dateOfBirthOpen} onClose={onDateOfBirthClose}/>
                 <Button variant='contained'
                   onClick={handleDateOfBirthOpen}>Edit</Button>
               </Stack>
@@ -303,7 +303,8 @@ const MyAccount: React.FC = () => {
               )}
               {!user.googleId && (
                 <Stack direction='row' justifyContent='space-between'>
-                  <UpdatePassword open={passwordOpen} handleClose={onPasswordClose} isTwoFAEnabled={user.isTwoFAEnabled}/>
+                  <UpdatePassword open={passwordOpen} onClose={onPasswordClose}
+                    isTwoFAEnabled={user.isTwoFAEnabled}/>
                   <Button variant='contained' color='primary' onClick={handlePasswordOpen}>
                     Change password
                   </Button>

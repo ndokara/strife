@@ -1,8 +1,8 @@
+import jwt from 'jsonwebtoken';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import User, { IUser } from '../../models/user';
+import User from '../../models/user';
 import { processAndUploadAvatar } from '../../utils/processUploadAvatar';
-import jwt from 'jsonwebtoken';
 
 passport.use(
   new GoogleStrategy(
@@ -13,7 +13,7 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const user: IUser | null = await User.findOne({ googleId: profile.id });
+        const user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
           const defaultUsername = profile.emails?.[0].value.split('@')[0];
@@ -25,10 +25,10 @@ passport.use(
             counter++;
           }
 
-          const photoUrl: string | undefined = profile.photos?.[0].value.replace(/=s\d+-c$/, '=s800-c');
-          let avatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
+          const photoUrl = profile.photos?.[0].value.replace(/=s\d+-c$/, '=s800-c');
+          let avatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
           if (!photoUrl) {
-            console.warn('Could not fetch Google avatar raw image:');
+            console.warn('Could not fetch Google avatar raw image');
           } else {
             try {
               const response: Response = await fetch(photoUrl);
@@ -36,7 +36,6 @@ passport.use(
 
               const imageBuffer: Buffer<ArrayBuffer> = Buffer.from(await response.arrayBuffer());
               avatarUrl = await processAndUploadAvatar(profile.id, imageBuffer);
-
             } catch (err) {
               console.warn('Failed to process Google avatar:', err);
             }
@@ -52,7 +51,6 @@ passport.use(
           }, process.env.TOKEN_KEY!, { expiresIn: '10m' });
 
           return done(null, false, { message: 'redirect', registerToken });
-
         } else {
           if (user.isTwoFAEnabled) {
             const tempToken: string = jwt.sign(

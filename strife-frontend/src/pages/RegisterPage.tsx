@@ -1,11 +1,11 @@
+import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
+import Content from '@/components/auth/Content.tsx';
 import CssBaseline from '@mui/material/CssBaseline';
 import Stack from '@mui/material/Stack';
-import AppTheme from '../theme/AppTheme.tsx';
 import RegisterCard from '../components/auth/RegisterCard.tsx';
+import AppTheme from '../theme/AppTheme.tsx';
 import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
 import StrifeLogo from '../theme/StrifeLogo.tsx';
-import Content from '@/components/auth/Content.tsx';
-import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
 
 export default function RegisterPage(props: { disableCustomTheme?: boolean }) {
   return (

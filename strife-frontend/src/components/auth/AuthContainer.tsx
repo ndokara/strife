@@ -17,12 +17,12 @@ export const AuthContainer = styled(Stack)(({ theme }) => ({
     zIndex: -1,
     inset: 0,
     backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(200,200,215,1) 100%)',
+      'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(200,200,215,1) 100%)',
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'cover',
     ...theme.applyStyles('dark', {
       backgroundImage:
-                'radial-gradient(circle, rgba(19,51,125,1) 0%, rgba(48,6,68,1) 100%)',
+        'radial-gradient(circle, rgba(19,51,125,1) 0%, rgba(48,6,68,1) 100%)',
     }),
   },
 }));

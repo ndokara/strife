@@ -1,10 +1,9 @@
 import bcrypt from 'bcrypt';
 import express, { Request, Response } from 'express';
-import { createSecretToken } from '../middleware/generateToken';
 import jwt from 'jsonwebtoken';
+import passport from 'passport';
 import speakeasy from 'speakeasy';
 import User, { IUser } from '../models/user';
-import passport from 'passport';
 
 const router = express.Router();
 
@@ -12,6 +11,7 @@ interface TempTokenPayload extends jwt.JwtPayload {
   userId: string;
   step: string;
 }
+
 interface DecodedRegisterToken {
   googleId: string;
   googleAccessToken: string,
@@ -21,6 +21,13 @@ interface DecodedRegisterToken {
   avatarUrl: string
 }
 
+function createSecretToken(id: string): string {
+  return jwt.sign({ sub: id }, process.env.TOKEN_KEY!, {
+    expiresIn: 3 * 24 * 60 * 60, // 3 days
+  });
+}
+
+
 router.post('/complete-registration', async (req: Request, res: Response): Promise<void> => {
   try {
     const { registerToken, dateOfBirth } = req.body;
@@ -29,20 +36,20 @@ router.post('/complete-registration', async (req: Request, res: Response): Promi
       res.status(400).json({ message: 'Missing register token.' });
       return;
     }
-    if(!dateOfBirth){
+    if (!dateOfBirth) {
       res.status(400).json({ message: 'Missing date of birth.' });
       return;
     }
 
     let decoded: DecodedRegisterToken;
     try {
-      decoded = jwt.verify(registerToken, process.env.TOKEN_KEY as string) as DecodedRegisterToken;
-    } catch (err) {
+      decoded = jwt.verify(registerToken, process.env.TOKEN_KEY!) as DecodedRegisterToken;
+    } catch {
       res.status(401).json({ message: 'Invalid or expired token.' });
       return;
     }
 
-    const {googleId, googleAccessToken, email, displayName, username, avatarUrl} = decoded;
+    const { googleId, googleAccessToken, email, displayName, username, avatarUrl } = decoded;
 
     const existingUser = await User.findOne({ $or: [{ email }, { googleId }] }).exec();
     if (existingUser) {
@@ -71,8 +78,9 @@ router.post('/complete-registration', async (req: Request, res: Response): Promi
     });
 
     res.status(201).json({ message: 'Google user registered successfully.' });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 
@@ -103,28 +111,26 @@ router.get('/google/callback', (req, res, next) => {
     }
     if (info?.twoFARequired && info.tempToken) {
       return res.redirect(`${process.env.FRONTEND_URL}/login?tempToken=${info.tempToken}`);
-    }
-
-    else return res.redirect(`${process.env.FRONTEND_URL}/login`);
+    } else return res.redirect(`${process.env.FRONTEND_URL}/login`);
   })(req, res, next);
 });
 
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, displayName, username, password, dateOfBirth } = req.body;
-    const existingUser: IUser | null = await User.findOne({ $or: [{ email }, { username }] }).exec();
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] }).exec();
     if (existingUser) {
       res.status(400).json({ message: 'Email or username already in use' });
       return;
     }
-    const defaultAvatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
+    const defaultAvatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
     const user: IUser = new User({
       email,
       displayName,
       username,
       password,
       dateOfBirth,
-      avatarUrl: defaultAvatarUrl
+      avatarUrl: defaultAvatarUrl,
     });
     await user.save();
 
@@ -138,8 +144,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     });
 
     res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 
@@ -149,7 +156,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const user: IUser | null = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.password!))) {
-      res.status(400).json({ message: 'Invalid credentials.' });
+      res.status(401).json({ message: 'Invalid credentials.' });
       return;
     }
 
@@ -176,7 +183,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       httpOnly: true,
     });
 
-    res.json({ token: token, message: 'Login Successful.' });
+    res.json({ token: token });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -191,7 +198,7 @@ router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<
   }
 
   try {
-    const decoded: string | jwt.JwtPayload = jwt.verify(tempToken, process.env.TOKEN_KEY!);
+    const decoded = jwt.verify(tempToken, process.env.TOKEN_KEY!);
     if (typeof decoded !== 'object' || !('userId' in decoded)) {
       res.status(401).json({ message: 'Invalid token payload.' });
       return;
@@ -199,7 +206,6 @@ router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<
 
     const { userId } = decoded as TempTokenPayload;
     const user: IUser | null = await User.findById(userId);
-
 
     if (!user) {
       res.status(401).json({ message: 'Unauthorized.' });
@@ -234,21 +240,22 @@ router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<
 
     res.status(200).json({ accessToken });
 
-  } catch (err: unknown) {
+  } catch (err) {
+    console.error(err);
     res.status(401).json({ message: 'Invalid or expired temp token.' });
     return;
   }
 });
 
-router.post('/logout', (req: Request,res: Response): void => {
+router.post('/logout', (req: Request, res: Response): void => {
   try {
     res.clearCookie('token');
     res.json({ message: 'Logged out successfully.' });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    console.error(error);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
-
 
 router.post('/check-existing-credentials', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -260,7 +267,8 @@ router.post('/check-existing-credentials', async (req: Request, res: Response): 
 
     res.json({ emailExists, usernameExists });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    console.error(error);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 export default router;

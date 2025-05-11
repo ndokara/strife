@@ -2,7 +2,7 @@ import { Button, CssBaseline, Link, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import * as React from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import AppTheme from '../theme/AppTheme.tsx';
 import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
 import FormControl from '@mui/material/FormControl';
@@ -21,15 +21,14 @@ import { isAxiosError } from 'axios';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton.tsx';
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
+  const [usernameError, setUsernameError] = useState(false);
+  const [usernameErrorMessage, setUsernameErrorMessage] = useState('');
 
-  const [usernameError, setUsernameError] = React.useState(false);
-  const [usernameErrorMessage, setUsernameErrorMessage] = React.useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
 
-  const [passwordError, setPasswordError] = React.useState(false);
-  const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
-
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const [is2FARequired, setIs2FARequired] = useState(false);
   const [tempToken, setTempToken] = useState('');
@@ -37,11 +36,11 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const [codeError, setCodeError] = useState(false);
 
   const [loginError, setLoginError] = useState<string>('');
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  React.useEffect(() => {
+  useEffect(() => {
     const tokenFromUrl = searchParams.get('tempToken');
     if (tokenFromUrl) {
       setTempToken(tokenFromUrl);
@@ -72,7 +71,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     }
   };
 
-  const validateInputs = (): boolean => {
+  const validateInputs = useCallback((): boolean => {
     let isValid = true;
 
     if (!username.trim() || username.length < 6) {
@@ -96,7 +95,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     }
 
     return isValid;
-  };
+  }, [username, password]);
 
   const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
