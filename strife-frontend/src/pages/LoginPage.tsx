@@ -19,6 +19,7 @@ import { AuthCard } from '@/components/auth/AuthCard.tsx';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { isAxiosError } from 'axios';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton.tsx';
+import GoogleSignIn from '@/components/auth/GoogleSignIn.tsx';
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const [usernameError, setUsernameError] = useState(false);
@@ -58,10 +59,15 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   };
   const handle2FASubmit = async () => {
     try {
-      const { accessToken } = await authApi.verify2FAOnLogin(code, tempToken);
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.removeItem('tempToken');
-      navigate('/dashboard/myaccount');
+      const response: LoginResponse = await authApi.login(username, password, code);
+      if ('token' in response) {
+        localStorage.setItem('token', response.accessToken);
+        navigate('/dashboard/myaccount');
+      } else if ('twoFARequired' in response) {
+        if (response.twoFARequired) {
+          setIs2FARequired(true);
+        }
+      }
     } catch (err: unknown) {
       if (isAxiosError(err)) {
         if (err.response && err.response.status === 401) {
@@ -102,16 +108,15 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     if (!validateInputs()) return;
 
     try {
-      const response: LoginResponse = await authApi.login(username, password);
+      const response: LoginResponse = await authApi.login(username, password, code);
 
       if ('token' in response) {
         localStorage.setItem('token', response.accessToken);
         navigate('/dashboard/myaccount');
-      } else if ('tempToken' in response) {
-        if (response.tempToken) {
-          setTempToken(response.tempToken);
+      } else if ('twoFARequired' in response) {
+        if (response.twoFARequired) {
+          setIs2FARequired(true);
         }
-        setIs2FARequired(true);
       }
     } catch (err: unknown) {
       if (isAxiosError(err)) {
@@ -127,6 +132,25 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const handleChangeCode = (code: string): void => {
     setCode(code);
     setCodeError(false);
+  };
+
+  const handleSuccess = async (data: any) => {
+    try {
+      console.log(data);
+
+      if (data.needsCompletion && data.userData) {
+        navigate('/complete-registration', { state: { userData: data.userData } });
+      } else if (data.token) {
+        localStorage.setItem('token', data.token);
+        navigate('/dashboard/myaccount');
+      }
+    } catch (error) {
+      console.error('Google login failed:', error);
+      // show toast or error UI
+    }
+  };
+  const handleError = (err: any) => {
+    console.error('Login error:', err);
   };
 
   return (
@@ -240,6 +264,11 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
               >
                 Log in
               </Button>
+              <GoogleSignIn
+                clientId="165924738846-9nb1enrffdod6h6jjtcc2j8mk74g6jfs.apps.googleusercontent.com"
+                onSuccess={handleSuccess}
+                onError={handleError}
+              />
               <GoogleLoginButton/>
               <Typography sx={{ textAlign: 'center' }}>
                 Don&apos;t have an account?{' '}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import AppTheme from '../theme/AppTheme.tsx';
 import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
 import dayjs, { Dayjs } from 'dayjs';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
@@ -17,6 +17,16 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 
+interface LocationState {
+  userData: {
+    googleId: string;
+    email: string;
+    displayName: string;
+    username: string;
+    avatarUrl: string;
+  };
+}
+
 const CompleteRegisterPage = (props: { disableCustomTheme?: boolean }) => {
   const defaultDate: Dayjs = dayjs('2000-01-01');
   const [dateOfBirth, setDateOfBirth] = useState<Dayjs | null>(defaultDate);
@@ -25,14 +35,18 @@ const CompleteRegisterPage = (props: { disableCustomTheme?: boolean }) => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const registerToken = searchParams.get('token');
+  const location = useLocation();
+  const state = location.state as LocationState | null;
+  const userData = state?.userData;
 
-  useEffect(() => {
-    if (!registerToken) {
-      // Redirect if no token found
-      navigate('/login');
-    }
-  }, [registerToken, navigate]);
+  // const registerToken = searchParams.get('token');
+
+  // useEffect(() => {
+  //   if (!registerToken) {
+  //     // Redirect if no token found
+  //     navigate('/login');
+  //   }
+  // }, [registerToken, navigate]);
 
   const handleSubmit = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault();
@@ -68,8 +82,14 @@ const CompleteRegisterPage = (props: { disableCustomTheme?: boolean }) => {
     }
 
     try {
-      const { accessToken } = await authApi.completeRegistration(registerToken!, dateOfBirth);
+      //TODO:this:
+      //afaik: the backend sets the access token in cookies which is called 'token'.
+      //on every route it should send it and let the frontend set it. i think.
+      const { accessToken } = await authApi.register(
+        userData!.email, userData!.displayName, userData!.username, dateOfBirth, userData!.googleId, userData!.avatarUrl
+      );
       localStorage.setItem('accessToken', accessToken);
+
       navigate('/dashboard/myaccount');
     } catch (err) {
       console.error(err);

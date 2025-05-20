@@ -24,7 +24,11 @@ const UserSchema: Schema<IUser> = new Schema({
   avatarUrl: { type: String, required: true },
   twoFASecret: { type: String },
   isTwoFAEnabled: { type: Boolean, default: false },
-  googleId: { type: String, unique: true},
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true, // this allows multiple documents with `googleId: null`
+  },
   googleAccessToken: { type: String },
 });
 

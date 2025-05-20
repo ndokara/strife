@@ -4,8 +4,6 @@ import jwt from 'jsonwebtoken';
 import passport from 'passport';
 import speakeasy from 'speakeasy';
 import User, { IUser } from '../models/user';
-import { OAuth2Client } from 'google-auth-library';
-import { processAndUploadAvatar } from '../utils/processUploadAvatar';
 
 const router = express.Router();
 
@@ -29,128 +27,46 @@ function createSecretToken(id: string): string {
   });
 }
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-router.post('/google', async (req: Request, res: Response): Promise<any> => {
-  //TODO: change name of this token to googleToken or sth.
-  const { googleToken } = req.body;
-
-  if (!googleToken) {
-    return res.status(400).json({ error: 'Missing ID token' });
-  }
-
+router.post('/complete-registration', async (req: Request, res: Response): Promise<void> => {
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: googleToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    const { registerToken, dateOfBirth } = req.body;
 
-    const payload = ticket.getPayload();
-
-    if (!payload) {
-      return res.status(403).json({ error: 'Invalid Google token' });
-    }
-
-    const { email, name, picture, sub: googleId } = payload;
-
-    // Check if user exists
-    let user = await User.findOne({ googleId });
-
-    if (!user) {
-      // Try email fallback in case of existing user without googleId
-      user = await User.findOne({ email });
-    }
-
-    if (!user) {
-
-      const defaultUsername = email?.split('@')[0];
-      let username = defaultUsername;
-      let counter = 1;
-
-      while (await User.exists({ username })) {
-        username = `${defaultUsername}_${counter}`;
-        counter++;
-      }
-
-      const photoUrl = picture?.replace(/=s\d+-c$/, '=s800-c');
-      let avatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
-      if (!photoUrl) {
-        console.warn('Could not fetch Google avatar raw image');
-      } else {
-        try {
-          const response = await fetch(photoUrl);
-          if (!response.ok) throw new Error('Failed to fetch avatar from Google.');
-
-          const imageBuffer: Buffer<ArrayBuffer> = Buffer.from(await response.arrayBuffer());
-          avatarUrl = await processAndUploadAvatar(googleId, imageBuffer);
-        } catch (err) {
-          console.warn('Failed to process Google avatar:', err);
-        }
-      }
-
-      const tempUserData = {
-        googleId,
-        email,
-        displayName: name,
-        username,
-        avatarUrl,
-      };
-
-      return res.status(200).json({
-        needsCompletion: true,
-        userData: tempUserData,
-      });
-
-    } else {
-      const token = createSecretToken(user.id);
-      res.cookie('token', token, {
-        path: '/',
-        expires: new Date(Date.now() + 86400000),
-        secure: true,
-        httpOnly: true,
-      });
-
-      res.json({ token: token });
-    }
-
-  } catch (err) {
-    console.error('Google login error:', err);
-    res.status(500).json({ error: 'Authentication failed' });
-  }
-});
-
-
-router.post('/register', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, displayName, username, password, dateOfBirth, googleId, avatarUrl } = req.body;
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] }).exec();
-    if (existingUser) {
-      res.status(400).json({ message: 'Email or username already in use' });
+    if (!registerToken) {
+      res.status(400).json({ message: 'Missing register token.' });
       return;
     }
-    let user: IUser;
-    if (googleId && avatarUrl) {
-      console.log('here1');
-      user = new User({
-        email,
-        displayName,
-        username,
-        dateOfBirth,
-        avatarUrl,
-        googleId
-      });
-    } else {
-      console.log('here');
-      const defaultAvatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
-      user = new User({
-        email,
-        displayName,
-        username,
-        password,
-        dateOfBirth,
-        avatarUrl: defaultAvatarUrl,
-      });
+    if (!dateOfBirth) {
+      res.status(400).json({ message: 'Missing date of birth.' });
+      return;
     }
+
+    let decoded: DecodedRegisterToken;
+    try {
+      decoded = jwt.verify(registerToken, process.env.TOKEN_KEY!) as DecodedRegisterToken;
+    } catch {
+      res.status(401).json({ message: 'Invalid or expired token.' });
+      return;
+    }
+
+    const { googleId, googleAccessToken, email, displayName, username, avatarUrl } = decoded;
+
+    const existingUser = await User.findOne({ $or: [{ email }, { googleId }] }).exec();
+    if (existingUser) {
+      res.status(400).json({ message: 'User already exists with this Google account or email.' });
+      return;
+    }
+
+    const user: IUser = new User({
+      googleId,
+      googleAccessToken,
+      email,
+      displayName,
+      username,
+      avatarUrl,
+      dateOfBirth,
+    });
+
     await user.save();
     const token = createSecretToken(user.id);
 
@@ -161,8 +77,73 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       httpOnly: true,
     });
 
-    // res.status(201).json({ message: 'User registered successfully' });
-    res.json({ token: token });
+    res.status(201).json({ message: 'Google user registered successfully.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
+  }
+});
+
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email'],
+}));
+
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, async (err, user, info) => {
+    if (err) {
+      console.error(err);
+      return res.redirect(`${process.env.FRONTEND_URL}/login`);
+    }
+
+    if (user) {
+      const token = createSecretToken(user.id);
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 86400000,
+      });
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard/myaccount`);
+    }
+
+    if (info?.registerToken) {
+      return res.redirect(`${process.env.FRONTEND_URL}/complete-registration?token=${info.registerToken}`);
+    }
+    if (info?.twoFARequired && info.tempToken) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?tempToken=${info.tempToken}`);
+    } else return res.redirect(`${process.env.FRONTEND_URL}/login`);
+  })(req, res, next);
+});
+
+router.post('/register', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, displayName, username, password, dateOfBirth } = req.body;
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] }).exec();
+    if (existingUser) {
+      res.status(400).json({ message: 'Email or username already in use' });
+      return;
+    }
+    const defaultAvatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
+    const user: IUser = new User({
+      email,
+      displayName,
+      username,
+      password,
+      dateOfBirth,
+      avatarUrl: defaultAvatarUrl,
+    });
+    await user.save();
+
+    const token = createSecretToken(user.id);
+
+    res.cookie('token', token, {
+      path: '/',
+      expires: new Date(Date.now() + 86400000),
+      secure: true,
+      httpOnly: true,
+    });
+
+    res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Something went wrong.' });
@@ -171,7 +152,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, password, code } = req.body;
+    const { username, password, code} = req.body;
     const user: IUser | null = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.password!))) {
@@ -185,7 +166,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         twoFARequired: true,
       });
       return;
-    } else if (user.isTwoFAEnabled && code) {
+    }
+    else if (user.isTwoFAEnabled && code){
       const isVerified: boolean = speakeasy.totp.verify({
         secret: user.twoFASecret!,
         encoding: 'base32',

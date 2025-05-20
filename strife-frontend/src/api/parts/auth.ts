@@ -3,7 +3,7 @@ import { Dayjs } from 'dayjs';
 
 export interface LoginResponse {
   accessToken: string;
-  tempToken?: string;
+  twoFARequired: boolean;
 }
 
 export interface RegisterResponse {
@@ -31,8 +31,8 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async register(email: string, displayName: string, username: string, password: string, dateOfBirth: Dayjs | null): Promise<RegisterResponse> {
-    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth });
+  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, googleId?: string, avatarUrl?: string, password?: string): Promise<RegisterResponse> {
+    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth, googleId, avatarUrl});
     return res.data;
   }
 
@@ -41,8 +41,8 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async login(username: string, password: string): Promise<LoginResponse> {
-    const res = await this.backend.post('login', { username, password });
+  async login(username: string, password: string, code: string): Promise<LoginResponse> {
+    const res = await this.backend.post('login', { username, password, code});
     return res.data;
   }
 
@@ -53,6 +53,12 @@ class AuthApi extends BackendApi {
 
   async verify2FAOnLogin(code: string, tempToken: string): Promise<LoginResponse> {
     const res = await this.backend.post('verify-2fa-onlogin', { code, tempToken });
+    return res.data;
+  }
+  async google(googleToken: any): Promise<any>{
+    const res = await this.backend.post('/google', JSON.stringify({ googleToken }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
     return res.data;
   }
 }
