@@ -31,8 +31,8 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, googleId?: string, avatarUrl?: string, password?: string): Promise<RegisterResponse> {
-    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth, googleId, avatarUrl});
+  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, googleId?: string, avatarUrl?: string, password?: string, accessToken?: string): Promise<RegisterResponse> {
+    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken});
     return res.data;
   }
 
@@ -55,8 +55,8 @@ class AuthApi extends BackendApi {
     const res = await this.backend.post('verify-2fa-onlogin', { code, tempToken });
     return res.data;
   }
-  async google(googleToken: any): Promise<any>{
-    const res = await this.backend.post('/google', JSON.stringify({ googleToken }), {
+  async google(accessToken: any): Promise<any>{
+    const res = await this.backend.post('/google', JSON.stringify({ accessToken }), {
       headers: { 'Content-Type': 'application/json' },
     });
     return res.data;

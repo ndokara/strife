@@ -20,6 +20,7 @@ import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { isAxiosError } from 'axios';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton.tsx';
 import GoogleSignIn from '@/components/auth/GoogleSignIn.tsx';
+import GoogleSignInCustom from '@/components/auth/GoogleSignInCustom.tsx';
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const [usernameError, setUsernameError] = useState(false);
@@ -137,7 +138,6 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const handleSuccess = async (data: any) => {
     try {
       console.log(data);
-
       if (data.needsCompletion && data.userData) {
         navigate('/complete-registration', { state: { userData: data.userData } });
       } else if (data.token) {
@@ -264,12 +264,16 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
               >
                 Log in
               </Button>
-              <GoogleSignIn
-                clientId="165924738846-9nb1enrffdod6h6jjtcc2j8mk74g6jfs.apps.googleusercontent.com"
+              {/*<GoogleSignIn*/}
+              {/*  clientId="165924738846-9nb1enrffdod6h6jjtcc2j8mk74g6jfs.apps.googleusercontent.com"*/}
+              {/*  onSuccess={handleSuccess}*/}
+              {/*  onError={handleError}*/}
+              {/*/>*/}
+              {/*<GoogleLoginButton/>*/}
+              <GoogleSignInCustom
                 onSuccess={handleSuccess}
-                onError={handleError}
+                onFailure={handleError}
               />
-              <GoogleLoginButton/>
               <Typography sx={{ textAlign: 'center' }}>
                 Don&apos;t have an account?{' '}
                 <Link component={RouterLink} to="/register" color="inherit">

@@ -32,38 +32,42 @@ function createSecretToken(id: string): string {
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 router.post('/google', async (req: Request, res: Response): Promise<any> => {
-  //TODO: change name of this token to googleToken or sth.
-  const { googleToken } = req.body;
+  const { accessToken } = req.body;
 
-  if (!googleToken) {
-    return res.status(400).json({ error: 'Missing ID token' });
+  if (!accessToken) {
+    return res.status(400).json({ error: 'Missing access token' });
   }
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken: googleToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
 
-    const payload = ticket.getPayload();
-
-    if (!payload) {
-      return res.status(403).json({ error: 'Invalid Google token' });
+    if (!userInfoRes.ok) {
+      return res.status(403).json({ error: 'Failed to fetch user info from Google' });
     }
 
-    const { email, name, picture, sub: googleId } = payload;
+    const profile = await userInfoRes.json();
+
+    const { email, name, picture, sub: googleId } = profile;
+
+    if (!email || !googleId) {
+      return res.status(403).json({ error: 'Incomplete user info from Google' });
+    }
 
     // Check if user exists
     let user = await User.findOne({ googleId });
 
     if (!user) {
-      // Try email fallback in case of existing user without googleId
+      // Fallback: look for user with same email but no googleId
       user = await User.findOne({ email });
     }
 
     if (!user) {
-
-      const defaultUsername = email?.split('@')[0];
+      // Create a new user that needs profile completion
+      const defaultUsername = email.split('@')[0];
       let username = defaultUsername;
       let counter = 1;
 
@@ -74,14 +78,13 @@ router.post('/google', async (req: Request, res: Response): Promise<any> => {
 
       const photoUrl = picture?.replace(/=s\d+-c$/, '=s800-c');
       let avatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
-      if (!photoUrl) {
-        console.warn('Could not fetch Google avatar raw image');
-      } else {
+
+      if (photoUrl) {
         try {
           const response = await fetch(photoUrl);
-          if (!response.ok) throw new Error('Failed to fetch avatar from Google.');
+          if (!response.ok) throw new Error('Failed to fetch avatar from Google');
 
-          const imageBuffer: Buffer<ArrayBuffer> = Buffer.from(await response.arrayBuffer());
+          const imageBuffer = Buffer.from(await response.arrayBuffer());
           avatarUrl = await processAndUploadAvatar(googleId, imageBuffer);
         } catch (err) {
           console.warn('Failed to process Google avatar:', err);
@@ -94,35 +97,38 @@ router.post('/google', async (req: Request, res: Response): Promise<any> => {
         displayName: name,
         username,
         avatarUrl,
+        accessToken,
       };
 
       return res.status(200).json({
         needsCompletion: true,
         userData: tempUserData,
       });
-
     } else {
+      // User exists — sign them in
+
+      user.googleAccessToken = accessToken;
+      user.save();
+
       const token = createSecretToken(user.id);
       res.cookie('token', token, {
         path: '/',
-        expires: new Date(Date.now() + 86400000),
+        expires: new Date(Date.now() + 86400000), // 1 day
         secure: true,
         httpOnly: true,
       });
 
-      res.json({ token: token });
+      return res.json({ token });
     }
-
   } catch (err) {
     console.error('Google login error:', err);
-    res.status(500).json({ error: 'Authentication failed' });
+    return res.status(500).json({ error: 'Authentication failed' });
   }
 });
 
-
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, displayName, username, password, dateOfBirth, googleId, avatarUrl } = req.body;
+    const { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken} = req.body;
     const existingUser = await User.findOne({ $or: [{ email }, { username }] }).exec();
     if (existingUser) {
       res.status(400).json({ message: 'Email or username already in use' });
@@ -130,17 +136,16 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     }
     let user: IUser;
     if (googleId && avatarUrl) {
-      console.log('here1');
       user = new User({
         email,
         displayName,
         username,
         dateOfBirth,
         avatarUrl,
-        googleId
+        googleId,
+        googleAccessToken: accessToken,
       });
     } else {
-      console.log('here');
       const defaultAvatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
       user = new User({
         email,
