@@ -31,7 +31,7 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, googleId?: string, avatarUrl?: string, password?: string, accessToken?: string): Promise<RegisterResponse> {
+  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, password?: string, googleId?: string, avatarUrl?: string, accessToken?: string): Promise<RegisterResponse> {
     const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken});
     return res.data;
   }
@@ -41,7 +41,7 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async login(username: string, password: string, code: string): Promise<LoginResponse> {
+  async login(username: string, password?: string, code?: string): Promise<LoginResponse> {
     const res = await this.backend.post('login', { username, password, code});
     return res.data;
   }

@@ -2,13 +2,13 @@ import { Button, CssBaseline, Link, Stack } from '@mui/material';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import * as React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import AppTheme from '../theme/AppTheme.tsx';
 import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
 import TextField from '@mui/material/TextField';
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import Divider from '@mui/material/Divider';
 import StrifeLogo from '../theme/StrifeLogo.tsx';
 import ForgotPassword from '../components/auth/ForgotPasswordDialog.tsx';
@@ -18,9 +18,14 @@ import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
 import { AuthCard } from '@/components/auth/AuthCard.tsx';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { isAxiosError } from 'axios';
-import GoogleLoginButton from '@/components/auth/GoogleLoginButton.tsx';
-import GoogleSignIn from '@/components/auth/GoogleSignIn.tsx';
 import GoogleSignInCustom from '@/components/auth/GoogleSignInCustom.tsx';
+
+interface LocationState {
+  userData: {
+    googleId: string,
+    username: string,
+  }
+}
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const [usernameError, setUsernameError] = useState(false);
@@ -33,23 +38,16 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const [password, setPassword] = useState('');
 
   const [is2FARequired, setIs2FARequired] = useState(false);
-  const [tempToken, setTempToken] = useState('');
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState(false);
 
   const [loginError, setLoginError] = useState<string>('');
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
-  useEffect(() => {
-    const tokenFromUrl = searchParams.get('tempToken');
-    if (tokenFromUrl) {
-      setTempToken(tokenFromUrl);
-      setIs2FARequired(true);
-      localStorage.setItem('tempToken', tokenFromUrl);
-    }
-  }, [searchParams]);
+  const location = useLocation();
+  const state = location.state as LocationState | null;
+  const userData = state?.userData;
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -60,7 +58,10 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   };
   const handle2FASubmit = async () => {
     try {
-      const response: LoginResponse = await authApi.login(username, password, code);
+      let response: LoginResponse;
+      if (userData?.googleId) {
+        response = await authApi.login(userData.username, undefined, code);
+      } else response = await authApi.login(username, password, code);
       if ('token' in response) {
         localStorage.setItem('token', response.accessToken);
         navigate('/dashboard/myaccount');
@@ -109,7 +110,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     if (!validateInputs()) return;
 
     try {
-      const response: LoginResponse = await authApi.login(username, password, code);
+      const response: LoginResponse = await authApi.login(username, password, undefined);
 
       if ('token' in response) {
         localStorage.setItem('token', response.accessToken);
@@ -140,6 +141,9 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
       console.log(data);
       if (data.needsCompletion && data.userData) {
         navigate('/complete-registration', { state: { userData: data.userData } });
+      } else if (data.twoFARequired && data.userData) {
+        navigate('/login', { state: { userData: data.userData } });
+        setIs2FARequired(true);
       } else if (data.token) {
         localStorage.setItem('token', data.token);
         navigate('/dashboard/myaccount');

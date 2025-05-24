@@ -1,27 +1,16 @@
 import bcrypt from 'bcrypt';
 import express, { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import passport from 'passport';
 import speakeasy from 'speakeasy';
 import User, { IUser } from '../models/user';
-import { OAuth2Client } from 'google-auth-library';
 import { processAndUploadAvatar } from '../utils/processUploadAvatar';
 
 const router = express.Router();
 
-interface TempTokenPayload extends jwt.JwtPayload {
-  userId: string;
-  step: string;
-}
-
-interface DecodedRegisterToken {
-  googleId: string;
-  googleAccessToken: string,
-  email: string;
-  displayName?: string;
-  username: string;
-  avatarUrl: string
-}
+// interface TempTokenPayload extends jwt.JwtPayload {
+//   userId: string;
+//   step: string;
+// }
 
 function createSecretToken(id: string): string {
   return jwt.sign({ sub: id }, process.env.TOKEN_KEY!, {
@@ -29,13 +18,11 @@ function createSecretToken(id: string): string {
   });
 }
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-router.post('/google', async (req: Request, res: Response): Promise<any> => {
+router.post('/google', async (req: Request, res: Response): Promise<void> => {
   const { accessToken } = req.body;
-
   if (!accessToken) {
-    return res.status(400).json({ error: 'Missing access token' });
+    res.status(400).json({ error: 'Missing access token' });
+    return;
   }
 
   try {
@@ -46,27 +33,23 @@ router.post('/google', async (req: Request, res: Response): Promise<any> => {
     });
 
     if (!userInfoRes.ok) {
-      return res.status(403).json({ error: 'Failed to fetch user info from Google' });
+      res.status(403).json({ error: 'Failed to fetch user info from Google' });
+      return;
     }
 
     const profile = await userInfoRes.json();
-
     const { email, name, picture, sub: googleId } = profile;
-
     if (!email || !googleId) {
-      return res.status(403).json({ error: 'Incomplete user info from Google' });
+      res.status(403).json({ error: 'Incomplete user info from Google' });
+      return;
     }
 
-    // Check if user exists
-    let user = await User.findOne({ googleId });
-
+    let user: IUser | null = await User.findOne({ googleId });
     if (!user) {
-      // Fallback: look for user with same email but no googleId
       user = await User.findOne({ email });
     }
 
     if (!user) {
-      // Create a new user that needs profile completion
       const defaultUsername = email.split('@')[0];
       let username = defaultUsername;
       let counter = 1;
@@ -100,15 +83,25 @@ router.post('/google', async (req: Request, res: Response): Promise<any> => {
         accessToken,
       };
 
-      return res.status(200).json({
+      res.status(200).json({
         needsCompletion: true,
         userData: tempUserData,
       });
     } else {
-      // User exists — sign them in
-
       user.googleAccessToken = accessToken;
-      user.save();
+      await user.save();
+
+      if (user.isTwoFAEnabled) {
+        const tempUserData = {
+          googleId,
+          username: user.username
+        };
+        res.status(200).json({
+          twoFARequired: true,
+          userData: tempUserData,
+        });
+        return;
+      }
 
       const token = createSecretToken(user.id);
       res.cookie('token', token, {
@@ -118,18 +111,19 @@ router.post('/google', async (req: Request, res: Response): Promise<any> => {
         httpOnly: true,
       });
 
-      return res.json({ token });
+      res.json({ token });
     }
   } catch (err) {
     console.error('Google login error:', err);
-    return res.status(500).json({ error: 'Authentication failed' });
+    res.status(500).json({ error: 'Authentication failed' });
+    return;
   }
 });
 
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken} = req.body;
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] }).exec();
+    const { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken } = req.body;
+    const existingUser: IUser | null = await User.findOne({ $or: [{ email }, { username }] }).exec();
     if (existingUser) {
       res.status(400).json({ message: 'Email or username already in use' });
       return;
@@ -179,9 +173,13 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { username, password, code } = req.body;
     const user: IUser | null = await User.findOne({ username });
 
-    if (!user || !(await bcrypt.compare(password, user.password!))) {
-      res.status(401).json({ message: 'Invalid credentials.' });
-      return;
+    if (!user?.googleId) {
+      console.log('password is: ', password);
+      console.log('user password is: ', user?.password);
+      if ((!user || !(await bcrypt.compare(password, user.password!)))) {
+        res.status(401).json({ message: 'Invalid credentials.' });
+        return;
+      }
     }
 
     if (user.isTwoFAEnabled && !code) {
@@ -217,63 +215,63 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<void> => {
-  const { code, tempToken } = req.body;
-
-  if (!code || !tempToken) {
-    res.status(400).json({ message: 'Missing code or tempToken.' });
-    return;
-  }
-
-  try {
-    const decoded = jwt.verify(tempToken, process.env.TOKEN_KEY!);
-    if (typeof decoded !== 'object' || !('userId' in decoded)) {
-      res.status(401).json({ message: 'Invalid token payload.' });
-      return;
-    }
-
-    const { userId } = decoded as TempTokenPayload;
-    const user: IUser | null = await User.findById(userId);
-
-    if (!user) {
-      res.status(401).json({ message: 'Unauthorized.' });
-      return;
-    }
-
-    if (!user.isTwoFAEnabled || !user.twoFASecret) {
-      res.status(401).json({ message: '2FA not configured.' });
-      return;
-    }
-
-    const isVerified: boolean = speakeasy.totp.verify({
-      secret: user.twoFASecret,
-      encoding: 'base32',
-      token: code,
-      window: 1,
-    });
-
-    if (!isVerified) {
-      res.status(401).json({ message: 'Invalid 2FA code.' });
-      return;
-    }
-
-    const accessToken = createSecretToken(user.id);
-
-    res.cookie('accessToken', accessToken, {
-      path: '/',
-      expires: new Date(Date.now() + 86400000),
-      secure: true,
-      httpOnly: true,
-    });
-
-    res.status(200).json({ accessToken });
-
-  } catch (err) {
-    console.error(err);
-    res.status(401).json({ message: 'Invalid or expired temp token.' });
-    return;
-  }
-});
+// router.post('/verify-2fa-onlogin', async (req: Request, res: Response): Promise<void> => {
+//   const { code, tempToken } = req.body;
+//
+//   if (!code || !tempToken) {
+//     res.status(400).json({ message: 'Missing code or tempToken.' });
+//     return;
+//   }
+//
+//   try {
+//     const decoded = jwt.verify(tempToken, process.env.TOKEN_KEY!);
+//     if (typeof decoded !== 'object' || !('userId' in decoded)) {
+//       res.status(401).json({ message: 'Invalid token payload.' });
+//       return;
+//     }
+//
+//     const { userId } = decoded as TempTokenPayload;
+//     const user: IUser | null = await User.findById(userId);
+//
+//     if (!user) {
+//       res.status(401).json({ message: 'Unauthorized.' });
+//       return;
+//     }
+//
+//     if (!user.isTwoFAEnabled || !user.twoFASecret) {
+//       res.status(401).json({ message: '2FA not configured.' });
+//       return;
+//     }
+//
+//     const isVerified: boolean = speakeasy.totp.verify({
+//       secret: user.twoFASecret,
+//       encoding: 'base32',
+//       token: code,
+//       window: 1,
+//     });
+//
+//     if (!isVerified) {
+//       res.status(401).json({ message: 'Invalid 2FA code.' });
+//       return;
+//     }
+//
+//     const accessToken = createSecretToken(user.id);
+//
+//     res.cookie('accessToken', accessToken, {
+//       path: '/',
+//       expires: new Date(Date.now() + 86400000),
+//       secure: true,
+//       httpOnly: true,
+//     });
+//
+//     res.status(200).json({ accessToken });
+//
+//   } catch (err) {
+//     console.error(err);
+//     res.status(401).json({ message: 'Invalid or expired temp token.' });
+//     return;
+//   }
+// });
 
 router.post('/logout', (req: Request, res: Response): void => {
   try {

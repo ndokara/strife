@@ -116,7 +116,7 @@ function RegisterCard() {
     const credentialsExist: boolean = await checkExistingCredentials();
     if (valid && !credentialsExist) {
       try {
-        const { accessToken } = await authApi.register(email, displayName, username, dateOfBirth, password);
+        const { accessToken } = await authApi.register(email, displayName, username, dateOfBirth, password, undefined, undefined, undefined);
         localStorage.setItem('accessToken', accessToken);
         navigate('/dashboard/myaccount');
       } catch (error) {
