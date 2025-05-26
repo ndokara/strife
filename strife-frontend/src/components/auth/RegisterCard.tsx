@@ -34,15 +34,15 @@ function RegisterCard() {
   const [dateOfBirth, setDateOfBirth] = useState<Dayjs | null>(defaultDate);
   const navigate = useNavigate();
 
-  const checkExistingCredentials = useCallback( async (): Promise<boolean> =>{
+  const checkExistingCredentials = useCallback(async (): Promise<boolean> => {
     let credentialsExist: boolean = false;
-    const {emailExists, usernameExists} = await authApi.checkCredentials(email, username);
-    if(emailExists){
+    const { emailExists, usernameExists } = await authApi.checkCredentials(email, username);
+    if (emailExists) {
       setEmailError(true);
       setEmailErrorMessage('An account with this email already exists.');
       credentialsExist = true;
     }
-    if (usernameExists){
+    if (usernameExists) {
       setUsernameError(true);
       setUsernameErrorMessage('This username is already taken.');
       credentialsExist = true;
@@ -50,7 +50,7 @@ function RegisterCard() {
     return credentialsExist;
   }, [email, username]);
 
-  const validateInputs = useCallback(async (): Promise<boolean> =>{
+  const validateInputs = useCallback(async (): Promise<boolean> => {
     let isValid = true;
 
     if ((!email.trim() || !/\S+@\S+\.\S+/.test(email))) {
@@ -116,9 +116,9 @@ function RegisterCard() {
     const credentialsExist: boolean = await checkExistingCredentials();
     if (valid && !credentialsExist) {
       try {
-        const {accessToken} = await authApi.register(email, displayName, username, password, dateOfBirth);
+        const { accessToken } = await authApi.register(email, displayName, username, dateOfBirth, password, undefined, undefined, undefined);
         localStorage.setItem('accessToken', accessToken);
-        navigate('/profile');
+        navigate('/dashboard/myaccount');
       } catch (error) {
         console.error('Registration failed:', error);
       }
@@ -128,7 +128,7 @@ function RegisterCard() {
   return (
     <AuthCard variant="outlined">
       <Typography component="h1" variant="h3" sx={{ width: '100%' }}>
-                Register
+        Register
       </Typography>
       <Box
         component='form'
@@ -143,7 +143,7 @@ function RegisterCard() {
       >
         <FormControl>
           <FormLabel>
-                        Email
+            Email
             <RequiredStar/>
           </FormLabel>
           <TextField
@@ -187,7 +187,7 @@ function RegisterCard() {
         </FormControl>
         <FormControl>
           <FormLabel>
-                        Username
+            Username
             <RequiredStar/>
           </FormLabel>
           <TextField
@@ -211,7 +211,7 @@ function RegisterCard() {
         </FormControl>
         <FormControl>
           <FormLabel>
-                        Password
+            Password
             <RequiredStar/>
           </FormLabel>
           <TextField
@@ -235,7 +235,7 @@ function RegisterCard() {
         </FormControl>
         <FormControl error={dateOfBirthError} fullWidth>
           <FormLabel>
-                        Date of Birth
+            Date of Birth
             <RequiredStar/>
           </FormLabel>
           <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en-gb">
@@ -258,12 +258,12 @@ function RegisterCard() {
           fullWidth
           variant="contained"
         >
-                    Register
+          Register
         </Button>
         <Typography sx={{ textAlign: 'center' }}>
-                    Already have an account?{' '}
+          Already have an account?{' '}
           <Link component={RouterLink} to="/login" color="inherit">
-                        Log in
+            Log in
           </Link>
         </Typography>
       </Box>

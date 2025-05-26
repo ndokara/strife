@@ -1,23 +1,30 @@
 import { BackendApi } from '../base';
 import { Dayjs } from 'dayjs';
 
+export interface GoogleResponse{
+  needsCompletion?: boolean;
+  twoFARequired?: boolean;
+  userData?: object;
+  token?: string;
+}
+
 export interface LoginResponse {
-    accessToken: string;
-    tempToken?: string;
+  accessToken: string;
+  twoFARequired: boolean;
 }
 
 export interface RegisterResponse {
-    message: string;
-    accessToken: string;
+  message: string;
+  accessToken: string;
 }
 
 interface CheckCredentialsResponse {
-    emailExists: boolean;
-    usernameExists: boolean;
+  emailExists: boolean;
+  usernameExists: boolean;
 }
 
 interface LogOutResponse {
-    message: string;
+  message: string;
 }
 
 class AuthApi extends BackendApi {
@@ -31,13 +38,13 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async register(email: string, displayName: string, username: string, password: string, dateOfBirth: Dayjs | null): Promise<RegisterResponse> {
-    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth });
+  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, password?: string, googleId?: string, avatarUrl?: string, accessToken?: string): Promise<RegisterResponse> {
+    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken});
     return res.data;
   }
 
-  async login(username: string, password: string): Promise<LoginResponse> {
-    const res = await this.backend.post('login', { username, password });
+  async login(username: string, password?: string, code?: string): Promise<LoginResponse> {
+    const res = await this.backend.post('login', { username, password, code});
     return res.data;
   }
 
@@ -45,8 +52,11 @@ class AuthApi extends BackendApi {
     const res = await this.backend.post('logout');
     return res.data;
   }
-  async verify2FAOnLogin(code: string, tempToken: string): Promise<LoginResponse> {
-    const res = await this.backend.post('verify-2fa-onlogin', {code, tempToken});
+
+  async google(accessToken: string): Promise<GoogleResponse>{
+    const res = await this.backend.post('/google', JSON.stringify({ accessToken }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
     return res.data;
   }
 }

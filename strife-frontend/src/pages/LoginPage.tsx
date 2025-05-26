@@ -8,7 +8,7 @@ import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
 import TextField from '@mui/material/TextField';
-import { Link as RouterLink, useNavigate } from 'react-router';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import Divider from '@mui/material/Divider';
 import StrifeLogo from '../theme/StrifeLogo.tsx';
 import ForgotPassword from '../components/auth/ForgotPasswordDialog.tsx';
@@ -18,26 +18,36 @@ import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
 import { AuthCard } from '@/components/auth/AuthCard.tsx';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { isAxiosError } from 'axios';
+import GoogleSignInCustom from '@/components/auth/GoogleSignInCustom.tsx';
+
+interface LocationState {
+  userData: {
+    googleId: string,
+    username: string,
+  }
+}
 
 const LoginPage = (props: { disableCustomTheme?: boolean }) => {
+  const [usernameError, setUsernameError] = useState(false);
+  const [usernameErrorMessage, setUsernameErrorMessage] = useState('');
 
-  const [usernameError, setUsernameError] = React.useState(false);
-  const [usernameErrorMessage, setUsernameErrorMessage] = React.useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
 
-  const [passwordError, setPasswordError] = React.useState(false);
-  const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
-
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const [is2FARequired, setIs2FARequired] = useState(false);
-  const [tempToken, setTempToken] = useState('');
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState(false);
 
   const [loginError, setLoginError] = useState<string>('');
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+
+  const location = useLocation();
+  const state = location.state as LocationState | null;
+  const userData = state?.userData;
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -48,9 +58,18 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   };
   const handle2FASubmit = async () => {
     try {
-      const { accessToken } = await authApi.verify2FAOnLogin(code, tempToken);
-      localStorage.setItem('accessToken', accessToken);
-      navigate('/dashboard/myaccount');
+      let response: LoginResponse;
+      if (userData?.googleId) {
+        response = await authApi.login(userData.username, undefined, code);
+      } else response = await authApi.login(username, password, code);
+      if ('token' in response) {
+        localStorage.setItem('token', response.accessToken);
+        navigate('/dashboard/myaccount');
+      } else if ('twoFARequired' in response) {
+        if (response.twoFARequired) {
+          setIs2FARequired(true);
+        }
+      }
     } catch (err: unknown) {
       if (isAxiosError(err)) {
         if (err.response && err.response.status === 401) {
@@ -60,7 +79,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     }
   };
 
-  const validateInputs = (): boolean => {
+  const validateInputs = useCallback((): boolean => {
     let isValid = true;
 
     if (!username.trim() || username.length < 6) {
@@ -84,25 +103,22 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     }
 
     return isValid;
-  };
+  }, [username, password]);
 
   const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (!validateInputs()) return;
 
     try {
-      const response: LoginResponse = await authApi.login(username, password);
+      const response: LoginResponse = await authApi.login(username, password, undefined);
 
       if ('token' in response) {
-        // No 2FA required
         localStorage.setItem('token', response.accessToken);
         navigate('/dashboard/myaccount');
-      } else if ('tempToken' in response) {
-        // 2FA is required
-        if (response.tempToken) {
-          setTempToken(response.tempToken);
+      } else if ('twoFARequired' in response) {
+        if (response.twoFARequired) {
+          setIs2FARequired(true);
         }
-        setIs2FARequired(true);
       }
     } catch (err: unknown) {
       if (isAxiosError(err)) {
@@ -118,6 +134,27 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   const handleChangeCode = (code: string): void => {
     setCode(code);
     setCodeError(false);
+  };
+
+  const handleSuccess = async (data: any) => {
+    try {
+      console.log(data);
+      if (data.needsCompletion && data.userData) {
+        navigate('/complete-registration', { state: { userData: data.userData } });
+      } else if (data.twoFARequired && data.userData) {
+        navigate('/login', { state: { userData: data.userData } });
+        setIs2FARequired(true);
+      } else if (data.token) {
+        localStorage.setItem('token', data.token);
+        navigate('/dashboard/myaccount');
+      }
+    } catch (error) {
+      console.error('Google login failed:', error);
+      // show toast or error UI
+    }
+  };
+  const handleError = (err: any) => {
+    console.error('Login error:', err);
   };
 
   return (
@@ -173,7 +210,6 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
                   name="username"
                   placeholder="Your username"
                   autoComplete="username"
-                  // autoFocus
                   required
                   fullWidth
                   variant="outlined"
@@ -232,6 +268,16 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
               >
                 Log in
               </Button>
+              {/*<GoogleSignIn*/}
+              {/*  clientId="165924738846-9nb1enrffdod6h6jjtcc2j8mk74g6jfs.apps.googleusercontent.com"*/}
+              {/*  onSuccess={handleSuccess}*/}
+              {/*  onError={handleError}*/}
+              {/*/>*/}
+              {/*<GoogleLoginButton/>*/}
+              <GoogleSignInCustom
+                onSuccess={handleSuccess}
+                onFailure={handleError}
+              />
               <Typography sx={{ textAlign: 'center' }}>
                 Don&apos;t have an account?{' '}
                 <Link component={RouterLink} to="/register" color="inherit">
@@ -245,17 +291,8 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
             <Typography component="h1" variant="h5">
               Enter 2FA Code
             </Typography>
-            {/*<TextField*/}
-            {/*    label="Verification Code"*/}
-            {/*    value={code}*/}
-            {/*    onChange={(e) => setCode(e.target.value)}*/}
-            {/*    error={!!codeError}*/}
-            {/*    helperText={codeError}*/}
-            {/*    fullWidth*/}
-            {/*/>*/}
             <VerificationCodeInput
               value={code}
-              // onChange={setCode}
               onChange={(code) => handleChangeCode(code)}
               onComplete={handle2FASubmit}
               error={codeError}

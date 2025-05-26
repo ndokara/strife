@@ -68,7 +68,7 @@ export default function ProfilePage(props: { disableCustomTheme?: boolean }) {
                 height: { xs: '50px', sm: '33px' },
               }}
             />
-            <ColorModeToggleButton />
+            <ColorModeToggleButton/>
           </Toolbar>
         </ThemedAppBar>
 
@@ -94,7 +94,7 @@ export default function ProfilePage(props: { disableCustomTheme?: boolean }) {
                     onClick={() => handleListItemClick(index, item.path)}
                   >
                     <ListItemIcon>{item.icon}</ListItemIcon>
-                    <ListItemText primary={item.text} />
+                    <ListItemText primary={item.text}/>
                   </ListItemButton>
                 </ListItem>
               ))}

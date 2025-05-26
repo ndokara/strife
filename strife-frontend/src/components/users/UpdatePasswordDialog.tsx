@@ -19,11 +19,11 @@ import axios from 'axios';
 
 interface UpdatePasswordProps {
     open: boolean;
-    handleClose: () => void;
+    onClose: () => void;
     isTwoFAEnabled: boolean;
 }
 
-export default function UpdatePassword({ open, handleClose, isTwoFAEnabled}: UpdatePasswordProps) {
+export default function UpdatePassword({ open, onClose, isTwoFAEnabled}: UpdatePasswordProps) {
   const [currentPassword, setCurrentPassword] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -50,7 +50,7 @@ export default function UpdatePassword({ open, handleClose, isTwoFAEnabled}: Upd
 
   const handleCloseWithReset = () => {
     resetFields();
-    handleClose();
+    onClose();
   };
 
   const handleUpdatePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -99,7 +99,7 @@ export default function UpdatePassword({ open, handleClose, isTwoFAEnabled}: Upd
       }
       await userApi.updatePassword(currentPassword, confirmPassword);
       resetFields();
-      handleClose();
+      onClose();
     } catch (err: unknown) {
       if(axios.isAxiosError(err)){
         const errorCode = err.message;
@@ -127,7 +127,7 @@ export default function UpdatePassword({ open, handleClose, isTwoFAEnabled}: Upd
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={onClose}
       slotProps={{
         paper: {
           component: 'form',

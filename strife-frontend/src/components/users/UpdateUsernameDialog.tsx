@@ -18,23 +18,25 @@ import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import axios from 'axios';
 
 interface UpdateUsernameProps {
-    open: boolean;
-    handleClose: () => void;
-    isTwoFAEnabled: boolean;
+  open: boolean;
+  onClose: () => void;
+  isTwoFAEnabled: boolean;
+  isGoogleUser: boolean;
 }
 
-export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: UpdateUsernameProps) {
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [token, setToken] = useState<string>('');
+export default function UpdateUsername({ open, onClose, isTwoFAEnabled, isGoogleUser }: UpdateUsernameProps) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [token, setToken] = useState('');
 
-  const [usernameError, setUsernameError] = React.useState(false);
-  const [usernameErrorMessage, setUsernameErrorMessage] = React.useState('');
-  const [passwordError, setPasswordError] = React.useState(false);
-  const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
-  const [codeError, setCodeError] = React.useState(false);
+  const [usernameError, setUsernameError] = useState(false);
+  const [usernameErrorMessage, setUsernameErrorMessage] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+  const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
+  const [codeError, setCodeError] = useState(false);
 
-  const resetFields = () =>{
+
+  const resetFields = () => {
     setUsernameError(false);
     setUsernameErrorMessage('');
     setUsername('');
@@ -47,7 +49,7 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
 
   const handleCloseWithReset = () => {
     resetFields();
-    handleClose();
+    onClose();
   };
 
   const handleUpdateUsernameSubmit = async (event: React.FormEvent<HTMLDivElement>) => {
@@ -56,7 +58,7 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
 
     let isValid = true;
 
-    if (!password.trim() || password.length < 6) {
+    if ((!password.trim() || password.length < 6) && !isGoogleUser) {
       setPasswordError(true);
       setPasswordErrorMessage('Password must be at least 6 characters long.');
       isValid = false;
@@ -73,29 +75,27 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
       setUsernameError(false);
       setUsernameErrorMessage('');
     }
-    if(isTwoFAEnabled && token.length < 6){
+    if (isTwoFAEnabled && token.length < 6) {
       setCodeError(true);
-    }
-    else{
+    } else {
       setCodeError(false);
     }
 
     if (!isValid) return;
 
     try {
-      if(isTwoFAEnabled){
+      if (isTwoFAEnabled) {
         await twoFAApi.verifyTwoFAToken(token);
       }
       await userApi.updateUsername(password, username);
 
       resetFields();
-      handleClose();
+      onClose();
     } catch (err: unknown) {
       let errorCode;
-      if(axios.isAxiosError(err)){
+      if (axios.isAxiosError(err)) {
         errorCode = err.response?.data?.error;
-      }
-      else if (err instanceof Error){
+      } else if (err instanceof Error) {
         errorCode = err.message;
       }
       switch (errorCode) {
@@ -120,7 +120,7 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={onClose}
       slotProps={{
         paper: {
           component: 'form',
@@ -134,22 +134,25 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
         sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}
       >
         <DialogContentText>
-                    Enter your new username.
+          Enter your new username.
         </DialogContentText>
 
-        <FormControl fullWidth variant="outlined" error={passwordError}>
-          <InputLabel>Password</InputLabel>
-          <OutlinedInput
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Your current password"
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {passwordError && <FormHelperText>{passwordErrorMessage}</FormHelperText>}
-        </FormControl>
+        {!isGoogleUser && (
+          <FormControl fullWidth variant="outlined" error={passwordError}>
+            <InputLabel>Password</InputLabel>
+            <OutlinedInput
+              id="password"
+              name="password"
+              type="password"
+              placeholder="Your current password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {passwordError && <FormHelperText>{passwordErrorMessage}</FormHelperText>}
+          </FormControl>
+        )}
+
         {isTwoFAEnabled && (
           <VerificationCodeInput
             value={token}
@@ -177,7 +180,7 @@ export default function UpdateUsername({ open, handleClose, isTwoFAEnabled}: Upd
       <DialogActions sx={{ pb: 3, px: 3 }}>
         <Button onClick={handleCloseWithReset}>Cancel</Button>
         <Button variant="contained" type="submit">
-                    Continue
+          Continue
         </Button>
       </DialogActions>
     </Dialog>

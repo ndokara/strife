@@ -1,7 +1,7 @@
-import multer, { FileFilterCallback } from 'multer';
 import { Request } from 'express';
+import multer, { FileFilterCallback } from 'multer';
 
-const MAX_SIZE: number = 1024 * 1024;
+const MAX_SIZE = 1024 * 1024;
 const allowedTypes = ['image/jpeg', 'image/png'];
 
 const fileFilter = (

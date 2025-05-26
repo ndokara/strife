@@ -1,19 +1,19 @@
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import routes from './routes';
-import authRoutes from './routes/auth';
-import userRoutes from './routes/users';
-import twoFARoutes from './routes/twofa';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+import morgan from 'morgan';
 import { connectDb } from './db/db';
+import routes from './routes';
+
+dotenv.config();
 
 const app = express();
 
 connectDb();
 
 const corsOptions = {
-  origin: 'http://localhost:5173',
+  origin: `${process.env.FRONTEND_URL}`,
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
   allowedHeaders: 'Content-Type,Authorization',
@@ -25,15 +25,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 
-
 routes(app);
-
-
-//rute
-app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/2fa', twoFARoutes);
-
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

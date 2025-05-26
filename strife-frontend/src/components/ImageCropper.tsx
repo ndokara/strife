@@ -39,8 +39,8 @@ export default function ImageCropper({ onAvatarUpdated }: { onAvatarUpdated?: ()
   const handleUpload = async (): Promise<void> => {
     if (!imageSrc || !croppedAreaPixels) return;
 
-    const blob: Blob = await getCroppedImageBlob(imageSrc, croppedAreaPixels, rotation);
-    const file: File = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+    const blob = await getCroppedImageBlob(imageSrc, croppedAreaPixels, rotation);
+    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
 
     await userApi.uploadAvatar(file);
     if (onAvatarUpdated) {
@@ -60,7 +60,7 @@ export default function ImageCropper({ onAvatarUpdated }: { onAvatarUpdated?: ()
       />
       <label htmlFor="upload">
         <Button variant="contained" component="span">
-                    Upload Image
+          Upload Image
         </Button>
       </label>
 

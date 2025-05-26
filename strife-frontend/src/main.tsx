@@ -5,6 +5,7 @@ import App from './App.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import DashboardPage from '@/pages/DashboardPage.tsx';
+import CompleteRegisterPage from '@/pages/CompleteRegisterPage.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <BrowserRouter>
@@ -13,6 +14,7 @@ createRoot(document.getElementById('root')!).render(
       <Route path='/login' element={<LoginPage/>}/>
       <Route path='/register' element={<RegisterPage/>}/>
       <Route path="/dashboard/*" element={<DashboardPage/>}/>
+      <Route path="/complete-registration" element={<CompleteRegisterPage/>}/>
     </Routes>
   </BrowserRouter>
 );

@@ -8,11 +8,11 @@ import dayjs, { Dayjs } from 'dayjs';
 import { userApi } from '@/api/parts/user.ts';
 
 interface UpdateDateOfBirthProps {
-    open: boolean;
-    handleClose: () => void;
+  open: boolean;
+  onClose: () => void;
 }
 
-export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBirthProps) {
+export default function UpdateDateOfBirth({ open, onClose }: UpdateDateOfBirthProps) {
   const defaultDate: Dayjs = dayjs('2000-01-01'); // Ensure this is a valid Dayjs object
   const [dateOfBirth, setDateOfBirth] = useState<Dayjs | null>(defaultDate);
   const [dateOfBirthError, setDateOfBirthError] = useState(false);
@@ -22,7 +22,7 @@ export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBir
     setDateOfBirthError(false);
     setDateOfBirthErrorMessage('');
     setDateOfBirth(defaultDate);
-    handleClose();
+    onClose();
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLDivElement>): Promise<void> => {
@@ -62,14 +62,14 @@ export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBir
     setDateOfBirthErrorMessage('');
 
     await userApi.updateDateOfBirth(dateOfBirth);
-    handleClose();
+    onClose();
   };
 
 
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={onClose}
       slotProps={{
         paper: {
           component: 'form',
@@ -79,7 +79,7 @@ export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBir
       }}
     >
       <DialogTitle>
-                Change Date of Birth
+        Change Date of Birth
       </DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
         <FormControl error={dateOfBirthError} fullWidth>
@@ -93,14 +93,14 @@ export default function UpdateDateOfBirth({ open, handleClose }: UpdateDateOfBir
             />
           </LocalizationProvider>
           {dateOfBirthError && (
-            <FormHelperText sx={{textAlign: 'center'}}>{dateOfBirthErrorMessage}</FormHelperText>
+            <FormHelperText sx={{ textAlign: 'center' }}>{dateOfBirthErrorMessage}</FormHelperText>
           )}
         </FormControl>
       </DialogContent>
       <DialogActions sx={{ pb: 3, px: 3 }}>
         <Button onClick={handleCloseWithReset}>Cancel</Button>
         <Button variant="contained" type="submit">
-                    Set
+          Set
         </Button>
       </DialogActions>
     </Dialog>

@@ -13,9 +13,9 @@ import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import axios from 'axios';
 
 interface Enable2FADialogProps {
-    open: boolean;
-    onClose: () => void;
-    onSuccess?: () => void;
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSuccess }) => {
@@ -25,6 +25,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
   const [codeError, setCodeError] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<1 | 2>(1);
+  const [tempToken, setTempToken] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -37,6 +38,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
         .then((res) => {
           setQrCode(res.qrCode);
           setStep(2);
+          setTempToken(res.tempToken);
         })
         .catch(() => {
           setError('Failed to generate QR code');
@@ -55,7 +57,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
     try {
       setLoading(true);
       setError('');
-      await twoFAApi.verifyTwoFASetup(token);
+      await twoFAApi.verifyTwoFASetup(token, tempToken);
 
       onSuccess?.();
       onClose();
@@ -82,7 +84,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
         ) : step === 2 ? (
           <>
             <Typography mb={2}>
-                            Scan the QR code below with Google Authenticator or a compatible app:
+              Scan the QR code below with Google Authenticator or a compatible app:
             </Typography>
             {qrCode && (
               <img src={qrCode} alt="2FA QR Code" style={{ width: '100%', marginBottom: '1rem' }}/>
@@ -108,7 +110,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
-                    Cancel
+          Cancel
         </Button>
         <Button onClick={handleVerify} disabled={loading || token.length < 6}>
           {loading ? 'Verifying...' : 'Verify'}

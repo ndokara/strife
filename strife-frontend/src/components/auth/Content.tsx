@@ -7,22 +7,22 @@ import PaletteIcon from '@mui/icons-material/Palette';
 
 const items = [
   {
-    Icon: <SecurityIcon sx={{color: 'text.secondary'}}/>,
+    Icon: <SecurityIcon sx={{ color: 'text.secondary' }}/>,
     Title: 'Privacy First',
     Description: 'Your conversations are safe with us—secure encryption ensures your messages stay yours.'
   },
   {
-    icon: <SpeedIcon sx={{color: 'text.secondary'}}/>,
+    icon: <SpeedIcon sx={{ color: 'text.secondary' }}/>,
     title: 'Low Latency, High Performance',
     description: 'Lightning-fast voice and text ensure you\'re always a step ahead, no lag, no delays.'
   },
   {
-    icon: <SportsEsportsIcon sx={{color: 'text.secondary'}}/>,
+    icon: <SportsEsportsIcon sx={{ color: 'text.secondary' }}/>,
     title: 'Made for Gamers',
     description: 'Squad up, strategize, and dominate—seamless voice and chat keep you in sync during every match.'
   },
   {
-    icon: <PaletteIcon sx={{color: 'text.secondary'}}/>,
+    icon: <PaletteIcon sx={{ color: 'text.secondary' }}/>,
     title: 'Make It Yours',
     description: 'Customize your experience with themes, roles, and notifications tailored to your style.'
   },
@@ -36,13 +36,13 @@ export default function Content() {
       }}
     >
       {items.map((item, index) => (
-        <Stack key={index} direction="row" sx={{gap: 3}}>
+        <Stack key={index} direction="row" sx={{ gap: 3 }}>
           {item.icon}
           <div>
-            <Typography gutterBottom sx={{fontWeight: 'medium'}}>
+            <Typography gutterBottom sx={{ fontWeight: 'medium' }}>
               {item.title}
             </Typography>
-            <Typography variant="body2" sx={{color: 'text.secondary'}}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {item.description}
             </Typography>
           </div>

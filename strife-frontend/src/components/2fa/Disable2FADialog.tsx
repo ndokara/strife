@@ -5,9 +5,9 @@ import { twoFAApi } from '@/api/parts/2fa.ts';
 import axios from 'axios';
 
 interface Disable2FADialogProps {
-    open: boolean;
-    onClose: () => void;
-    onSuccess?: () => void;
+  open: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
 const Disable2FADialog: React.FC<Disable2FADialogProps> = ({ open, onClose, onSuccess }) => {
@@ -96,7 +96,7 @@ const Disable2FADialog: React.FC<Disable2FADialogProps> = ({ open, onClose, onSu
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={loading}>
-                    Cancel
+          Cancel
         </Button>
         <Button onClick={handleDisable2FA} disabled={loading || password.length === 0 || token.length < 6}>
           {loading ? 'Processing...' : 'Disable 2FA'}

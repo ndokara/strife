@@ -13,12 +13,12 @@ import {
 import { userApi } from '@/api/parts/user.ts';
 
 interface UpdateDisplayNameProps {
-    open: boolean;
-    handleClose: () => void;
-    username: string;
+  open: boolean;
+  onClose: () => void;
+  username: string;
 }
 
-export default function UpdateDisplayName({ open, handleClose, username }: UpdateDisplayNameProps) {
+export default function UpdateDisplayName({ open, onClose, username }: UpdateDisplayNameProps) {
   const [displayName, setDisplayName] = React.useState('');
 
   const handleSubmit = async (event: React.FormEvent<HTMLDivElement>): Promise<void> => {
@@ -29,13 +29,13 @@ export default function UpdateDisplayName({ open, handleClose, username }: Updat
     } else {
       await userApi.updateDisplayName(displayName);
     }
-    handleClose();
+    onClose();
   };
 
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={onClose}
       slotProps={{
         paper: {
           component: 'form',
@@ -49,10 +49,10 @@ export default function UpdateDisplayName({ open, handleClose, username }: Updat
         sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}
       >
         <DialogContentText>
-                    Enter your new display name.
+          Enter your new display name.
         </DialogContentText>
         <DialogContentText variant='caption'>
-                    If you do not enter a new display name, your display name will be reverted to your username.
+          If you do not enter a new display name, your display name will be reverted to your username.
         </DialogContentText>
 
         <FormControl fullWidth variant="outlined">
@@ -69,9 +69,9 @@ export default function UpdateDisplayName({ open, handleClose, username }: Updat
         </FormControl>
       </DialogContent>
       <DialogActions sx={{ pb: 3, px: 3 }}>
-        <Button onClick={handleClose}>Cancel</Button>
+        <Button onClick={onClose}>Cancel</Button>
         <Button variant="contained" type="submit">
-                    Continue
+          Continue
         </Button>
       </DialogActions>
     </Dialog>
