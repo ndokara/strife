@@ -160,11 +160,7 @@ router.put('/username', verifyToken, async (req: Request, res: Response): Promis
       return;
     }
 
-    if (!user.password && !user.googleId) {
-      res.status(403).json({ error: 'no_password', message: 'Password is required.' });
-      return;
-    }
-    if (user.password) {
+    if (!user.googleId) {
       const passwordValid = await bcrypt.compare(currentPassword, user.password!);
       if (!passwordValid) {
         res.status(403).json({ error: 'invalid_password', message: 'Incorrect password.' });

@@ -26,7 +26,7 @@ router.post('/2fa-setup', verifyToken, async (req: Request, res: Response, next:
         newTwoFASecret: secret.base32,
         createdAt: Date.now(),
       },
-      process.env.TOKEN_KEY as string,
+      process.env.TOKEN_KEY!,
       { expiresIn: '5m' }
     );
 
@@ -54,13 +54,14 @@ router.post('/verify-2fa-setup', verifyToken, async (req: Request, res: Response
 
     let payload: jwt.JwtPayload;
     try {
-      const decoded = jwt.verify(tempToken, process.env.TOKEN_KEY as string);
+      const decoded = jwt.verify(tempToken, process.env.TOKEN_KEY!);
       if (typeof decoded === 'string') {
         res.status(400).json({ error: 'Invalid token format' });
         return;
       }
       payload = decoded;
     } catch (err) {
+      console.error(err);
       res.status(400).json({ error: 'Invalid or expired temp token' });
       return;
     }
@@ -139,7 +140,7 @@ router.post('/remove-2fa', verifyToken, async (req: Request, res: Response, next
       return;
     }
 
-    if(!user.password){
+    if (!user.password) {
       return;
     }
 

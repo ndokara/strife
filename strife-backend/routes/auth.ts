@@ -167,29 +167,36 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { username, password, code } = req.body;
     const user: IUser | null = await User.findOne({ username });
 
-    if (!user?.googleId) {
-      if ((!user || !(await bcrypt.compare(password, user.password!)))) {
+    if (!user) {
+      res.status(401).json({ message: 'Invalid credentials.' });
+      return;
+    }
+
+    if (!user.googleId) {
+      if (!(await bcrypt.compare(password, user.password!))) {
         res.status(401).json({ message: 'Invalid credentials.' });
         return;
       }
     }
 
-    if (user.isTwoFAEnabled && !code) {
-      res.status(200).json({
-        message: '2FA required.',
-        twoFARequired: true,
-      });
-      return;
-    } else if (user.isTwoFAEnabled && code) {
-      const isVerified: boolean = speakeasy.totp.verify({
-        secret: user.twoFASecret!,
-        encoding: 'base32',
-        token: code,
-        window: 1,
-      });
-      if (!isVerified) {
-        res.status(401).json({ message: 'Invalid 2FA code.' });
+    if (user.isTwoFAEnabled) {
+      if (!code) {
+        res.status(200).json({
+          message: '2FA required.',
+          twoFARequired: true,
+        });
         return;
+      } else {
+        const isVerified: boolean = speakeasy.totp.verify({
+          secret: user.twoFASecret!,
+          encoding: 'base32',
+          token: code,
+          window: 1,
+        });
+        if (!isVerified) {
+          res.status(401).json({ message: 'Invalid 2FA code.' });
+          return;
+        }
       }
     }
 
@@ -202,8 +209,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     });
 
     res.json({ token: token });
-  } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Something went wrong.' });
   }
 });
 

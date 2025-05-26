@@ -11,7 +11,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction): vo
 
   try {
     const decoded = jwt.verify(token, process.env.TOKEN_KEY!) as jwt.JwtPayload;
-    req.user = { id: decoded.sub };
+    req.user = { id: decoded.sub! };
     next();
   } catch {
     res.status(403).json({ message: 'Invalid or expired token' });
