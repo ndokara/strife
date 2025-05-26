@@ -1,6 +1,13 @@
 import { BackendApi } from '../base';
 import { Dayjs } from 'dayjs';
 
+export interface GoogleResponse{
+  needsCompletion?: boolean;
+  twoFARequired?: boolean;
+  userData?: object;
+  token?: string;
+}
+
 export interface LoginResponse {
   accessToken: string;
   twoFARequired: boolean;
@@ -36,11 +43,6 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async completeRegistration(registerToken: string, dateOfBirth: Dayjs | Date): Promise<RegisterResponse> {
-    const res = await this.backend.post('complete-registration', { registerToken, dateOfBirth });
-    return res.data;
-  }
-
   async login(username: string, password?: string, code?: string): Promise<LoginResponse> {
     const res = await this.backend.post('login', { username, password, code});
     return res.data;
@@ -51,11 +53,7 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async verify2FAOnLogin(code: string, tempToken: string): Promise<LoginResponse> {
-    const res = await this.backend.post('verify-2fa-onlogin', { code, tempToken });
-    return res.data;
-  }
-  async google(accessToken: any): Promise<any>{
+  async google(accessToken: string): Promise<GoogleResponse>{
     const res = await this.backend.post('/google', JSON.stringify({ accessToken }), {
       headers: { 'Content-Type': 'application/json' },
     });

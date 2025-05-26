@@ -27,7 +27,7 @@ const UserSchema: Schema<IUser> = new Schema({
   googleId: {
     type: String,
     unique: true,
-    sparse: true, // this allows multiple documents with `googleId: null`
+    sparse: true,
   },
   googleAccessToken: { type: String },
 });

@@ -6,7 +6,6 @@ import morgan from 'morgan';
 import passport from 'passport';
 import { connectDb } from './db/db';
 import routes from './routes';
-import './middleware/passport/google';
 
 dotenv.config();
 

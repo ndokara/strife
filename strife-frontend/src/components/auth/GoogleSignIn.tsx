@@ -48,9 +48,6 @@ const GoogleSignIn: React.FC<Props> = ({ clientId, onSuccess, onError }) => {
 
   const handleCredentialResponse = async (response: { credential: string }) => {
     try {
-      // const result = await axios.post('/api/auth/google', {
-      //   token: response.credential,
-      // });
       const result = await authApi.google(response.credential);
 
       if (onSuccess) onSuccess(result);

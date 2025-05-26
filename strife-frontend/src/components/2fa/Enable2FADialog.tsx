@@ -25,6 +25,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
   const [codeError, setCodeError] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<1 | 2>(1);
+  const [tempToken, setTempToken] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -37,6 +38,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
         .then((res) => {
           setQrCode(res.qrCode);
           setStep(2);
+          setTempToken(res.tempToken);
         })
         .catch(() => {
           setError('Failed to generate QR code');
@@ -55,7 +57,7 @@ const Enable2FADialog: React.FC<Enable2FADialogProps> = ({ open, onClose, onSucc
     try {
       setLoading(true);
       setError('');
-      await twoFAApi.verifyTwoFASetup(token);
+      await twoFAApi.verifyTwoFASetup(token, tempToken);
 
       onSuccess?.();
       onClose();

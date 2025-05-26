@@ -83,7 +83,7 @@ export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPas
     try {
       await twoFAApi.verifyTwoFAToken(token);
       setLoading(true);
-      const res = await twoFAApi.twoFASetupNew(email);
+      const res = await twoFAApi.twoFASetup(email);
       setQrCode(res.qrCode);
       setTempToken(res.tempToken);
       setShowSetupStep(true);
@@ -118,7 +118,7 @@ export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPas
     try {
       if (isTwoFAEnabled) {
         await twoFAApi.verifyTwoFAToken(token);
-        await twoFAApi.verifyTwoFASetupAndUpdate(tempToken, newToken);
+        await twoFAApi.verifyTwoFASetup(newToken, tempToken);
       }
 
       await userApi.updateEmail(email);
