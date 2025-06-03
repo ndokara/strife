@@ -79,7 +79,7 @@ const CompleteRegisterPage = (props: { disableCustomTheme?: boolean }) => {
       // const { accessToken } = await authApi.register(email, displayName, username, dateOfBirth, password, undefined, undefined, undefined);
 
       const { accessToken } = await authApi.register(
-        userData!.email, userData!.displayName, userData!.username, dateOfBirth,undefined, userData!.googleId, userData!.avatarUrl
+        userData!.email, userData!.displayName, userData!.username, dateOfBirth, undefined, userData!.googleId, userData!.avatarUrl
       );
       localStorage.setItem('accessToken', accessToken);
 

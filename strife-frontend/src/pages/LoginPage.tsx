@@ -1,24 +1,24 @@
+import { authApi, GoogleResponse, LoginResponse } from '@/api/parts/auth.ts';
+import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
+import { AuthCard } from '@/components/auth/AuthCard.tsx';
+import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
+import GoogleSignIn from '@/components/auth/GoogleSignIn.tsx';
 import { Button, CssBaseline, Link, Stack } from '@mui/material';
-import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import * as React from 'react';
-import { useCallback, useState } from 'react';
-import AppTheme from '../theme/AppTheme.tsx';
-import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
+import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormLabel from '@mui/material/FormLabel';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { isAxiosError } from 'axios';
+import * as React from 'react';
+import { useCallback, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
-import Divider from '@mui/material/Divider';
-import StrifeLogo from '../theme/StrifeLogo.tsx';
 import ForgotPassword from '../components/auth/ForgotPasswordDialog.tsx';
 import { RequiredStar } from '../components/auth/RequiredStar.tsx';
-import { authApi, LoginResponse } from '@/api/parts/auth.ts';
-import { AuthContainer } from '@/components/auth/AuthContainer.tsx';
-import { AuthCard } from '@/components/auth/AuthCard.tsx';
-import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
-import { isAxiosError } from 'axios';
-import GoogleSignInCustom from '@/components/auth/GoogleSignInCustom.tsx';
+import AppTheme from '../theme/AppTheme.tsx';
+import ColorModeToggleButton from '../theme/ColorModeToggleButton.tsx';
+import StrifeLogo from '../theme/StrifeLogo.tsx';
 
 interface LocationState {
   userData: {
@@ -136,16 +136,15 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
     setCodeError(false);
   };
 
-  const handleSuccess = async (data: any) => {
+  const handleSuccess = async (response: GoogleResponse) => {
     try {
-      console.log(data);
-      if (data.needsCompletion && data.userData) {
-        navigate('/complete-registration', { state: { userData: data.userData } });
-      } else if (data.twoFARequired && data.userData) {
-        navigate('/login', { state: { userData: data.userData } });
+      if (response.needsCompletion && response.userData) {
+        navigate('/complete-registration', { state: { userData: response.userData } });
+      } else if (response.twoFARequired && response.userData) {
+        navigate('/login', { state: { userData: response.userData } });
         setIs2FARequired(true);
-      } else if (data.token) {
-        localStorage.setItem('token', data.token);
+      } else if (response.token) {
+        localStorage.setItem('token', response.token);
         navigate('/dashboard/myaccount');
       }
     } catch (error) {
@@ -153,7 +152,8 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
       // show toast or error UI
     }
   };
-  const handleError = (err: any) => {
+  const handleError = (err: Error) => {
+    // TODO: handle error properly
     console.error('Login error:', err);
   };
 
@@ -268,13 +268,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
               >
                 Log in
               </Button>
-              {/*<GoogleSignIn*/}
-              {/*  clientId="165924738846-9nb1enrffdod6h6jjtcc2j8mk74g6jfs.apps.googleusercontent.com"*/}
-              {/*  onSuccess={handleSuccess}*/}
-              {/*  onError={handleError}*/}
-              {/*/>*/}
-              {/*<GoogleLoginButton/>*/}
-              <GoogleSignInCustom
+              <GoogleSignIn
                 onSuccess={handleSuccess}
                 onFailure={handleError}
               />

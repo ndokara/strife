@@ -8,7 +8,7 @@ import { processAndUploadAvatar } from '../utils/processUploadAvatar';
 const router = express.Router();
 
 function createSecretToken(id: string): string {
-  return jwt.sign({ sub: id }, process.env.TOKEN_KEY!, {
+  return jwt.sign({ sub: id } as object, process.env.TOKEN_KEY!, {
     expiresIn: 3 * 24 * 60 * 60, // 3 days
   });
 }
