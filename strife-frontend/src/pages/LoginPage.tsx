@@ -122,7 +122,7 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
       }
     } catch (err: unknown) {
       if (isAxiosError(err)) {
-        if (err.response && err.response.status === 400) {
+        if (err.response && err.response.status === 401) {
           setPasswordError(true);
           setPasswordErrorMessage('Invalid username or password');
         }
