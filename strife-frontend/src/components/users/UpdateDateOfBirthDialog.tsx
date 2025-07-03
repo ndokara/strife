@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormHelperText, } from '@mui/material';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import { userApi } from '@/api/parts/user.ts';
+import { dateOfBirthSchema } from '@/validators/userSchema.ts';
 
 interface UpdateDateOfBirthProps {
   open: boolean;
@@ -18,50 +19,45 @@ export default function UpdateDateOfBirth({ open, onClose }: UpdateDateOfBirthPr
   const [dateOfBirthError, setDateOfBirthError] = useState(false);
   const [dateOfBirthErrorMessage, setDateOfBirthErrorMessage] = useState('');
 
-  const handleCloseWithReset = () => {
+  const resetFields = () =>{
     setDateOfBirthError(false);
     setDateOfBirthErrorMessage('');
     setDateOfBirth(defaultDate);
+  };
+
+  const handleCloseWithReset = () => {
+    resetFields();
     onClose();
   };
+  const validateInputs = useCallback((): boolean => {
+    resetFields();
+    const validationResult = dateOfBirthSchema.validate({
+      dateOfBirth: dateOfBirth?.toDate?.() || null, // Joi expects JS Date
+    }, {abortEarly: false });
+
+    if(!validationResult.error) {
+      return true;
+    }
+    validationResult.error.details.forEach((detail) =>{
+      const field = detail.path[0];
+      switch (field) {
+        case 'dateOfBirth':
+          setDateOfBirthError(true);
+          setDateOfBirthErrorMessage(detail.message);
+          break;
+      }
+    });
+    return false;
+  }, [dateOfBirth]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLDivElement>): Promise<void> => {
     event.preventDefault();
     event.stopPropagation();
 
-    if (!dateOfBirth) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('Date of birth is required.');
+    if(!validateInputs())
       return;
-    }
-
-    const today = dayjs();
-    const minAgeDate = today.subtract(13, 'years');
-    const maxDate = today;
-    const minValidDate = today.subtract(100, 'years');
-
-    if (dateOfBirth.isAfter(maxDate)) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('Date of birth cannot be in the future.');
-      return;
-    }
-
-    if (dateOfBirth.isAfter(minAgeDate)) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('You must be at least 13 years old.');
-      return;
-    }
-
-    if (dateOfBirth.isBefore(minValidDate)) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('Please enter a realistic date of birth.');
-      return;
-    }
-
-    setDateOfBirthError(false);
-    setDateOfBirthErrorMessage('');
-
-    await userApi.updateDateOfBirth(dateOfBirth);
+    
+    await userApi.updateDateOfBirth(dateOfBirth!);
     onClose();
   };
 

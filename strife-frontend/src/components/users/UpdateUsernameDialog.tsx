@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useCallback, useState } from 'react';
 import {
   Button,
   Dialog,
@@ -6,16 +7,16 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  OutlinedInput,
   FormControl,
+  FormHelperText,
   InputLabel,
-  FormHelperText
+  OutlinedInput
 } from '@mui/material';
-import { useState } from 'react';
 import { userApi } from '@/api/parts/user.ts';
 import { twoFAApi } from '@/api/parts/2fa.ts';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import axios from 'axios';
+import { loginSchema } from '@/validators/userSchema.ts';
 
 interface UpdateUsernameProps {
   open: boolean;
@@ -52,43 +53,50 @@ export default function UpdateUsername({ open, onClose, isTwoFAEnabled, isGoogle
     onClose();
   };
 
+  const validateInputs = useCallback((): boolean => {
+    setUsernameError(false);
+    setUsernameErrorMessage('');
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+
+    const validationResult = loginSchema.validate({
+      username,
+      password
+    }, { abortEarly: false });
+
+    if (!validationResult.error) {
+      return true;
+    }
+    validationResult.error.details.forEach((detail) => {
+      const field = detail.path[0];
+
+      switch (field) {
+        case 'username':
+          setUsernameError(true);
+          setUsernameErrorMessage(detail.message);
+          break;
+        case 'password':
+          setPasswordError(true);
+          setPasswordErrorMessage(detail.message);
+          break;
+      }
+    });
+    return false;
+
+  }, [username, password]);
+
   const handleUpdateUsernameSubmit = async (event: React.FormEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
 
-    let isValid = true;
-
-    if ((!password.trim() || password.length < 6) && !isGoogleUser) {
-      setPasswordError(true);
-      setPasswordErrorMessage('Password must be at least 6 characters long.');
-      isValid = false;
-    } else {
-      setPasswordError(false);
-      setPasswordErrorMessage('');
-    }
-
-    if (!username.trim() || username.length < 6) {
-      setUsernameError(true);
-      setUsernameErrorMessage('Username must be at least 6 characters long.');
-      isValid = false;
-    } else {
-      setUsernameError(false);
-      setUsernameErrorMessage('');
-    }
-    if (isTwoFAEnabled && token.length < 6) {
-      setCodeError(true);
-    } else {
-      setCodeError(false);
-    }
-
-    if (!isValid) return;
+    if (!validateInputs())
+      return;
 
     try {
       if (isTwoFAEnabled) {
         await twoFAApi.verifyTwoFAToken(token);
       }
       await userApi.updateUsername(password, username);
-
       resetFields();
       onClose();
     } catch (err: unknown) {
@@ -105,7 +113,7 @@ export default function UpdateUsername({ open, onClose, isTwoFAEnabled, isGoogle
           break;
         case 'username_taken':
           setUsernameError(true);
-          setUsernameErrorMessage('This username is already taken.');
+          setUsernameErrorMessage('An account with this username already exists.');
           break;
         case 'invalid_token':
           setCodeError(true);

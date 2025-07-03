@@ -1,7 +1,7 @@
 import { BackendApi } from '../base';
 import { Dayjs } from 'dayjs';
 
-export interface GoogleResponse{
+export interface GoogleResponse {
   needsCompletion?: boolean;
   twoFARequired?: boolean;
   userData?: object;
@@ -33,18 +33,27 @@ class AuthApi extends BackendApi {
     super('api/auth');
   }
 
-  async checkCredentials(email: string, username: string): Promise<CheckCredentialsResponse> {
+  async checkCredentials(email?: string, username?: string): Promise<CheckCredentialsResponse> {
     const res = await this.backend.post('check-existing-credentials', { email, username });
     return res.data;
   }
 
-  async register(email: string, displayName: string, username: string, dateOfBirth: Dayjs | null, password?: string, googleId?: string, avatarUrl?: string, accessToken?: string): Promise<RegisterResponse> {
-    const res = await this.backend.post('register', { email, displayName, username, password, dateOfBirth, googleId, avatarUrl, accessToken});
+  async register(email: string, displayName: string | null, username: string, dateOfBirth: Dayjs | null, password?: string, googleId?: string, avatarUrl?: string, accessToken?: string): Promise<RegisterResponse> {
+    const res = await this.backend.post('register', {
+      email,
+      displayName,
+      username,
+      password,
+      dateOfBirth,
+      googleId,
+      avatarUrl,
+      accessToken
+    });
     return res.data;
   }
 
   async login(username: string, password?: string, code?: string): Promise<LoginResponse> {
-    const res = await this.backend.post('login', { username, password, code});
+    const res = await this.backend.post('login', { username, password, code });
     return res.data;
   }
 
@@ -53,7 +62,7 @@ class AuthApi extends BackendApi {
     return res.data;
   }
 
-  async google(accessToken: string): Promise<GoogleResponse>{
+  async google(accessToken: string): Promise<GoogleResponse> {
     const res = await this.backend.post('/google', JSON.stringify({ accessToken }), {
       headers: { 'Content-Type': 'application/json' },
     });

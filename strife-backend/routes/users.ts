@@ -6,8 +6,6 @@ import User, { IUser } from '../models/user';
 import router from './auth';
 import { processAndUploadAvatar } from '../utils/processUploadAvatar';
 
-//TODO: set max length of all credentials on registration and updating.
-
 const defaultAvatarUrl: string = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg` as const;
 
 router.get('/profile', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {

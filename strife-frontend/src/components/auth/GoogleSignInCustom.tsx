@@ -48,9 +48,6 @@ const GoogleSignInCustom = ({ onSuccess, onFailure }: GoogleSignInCustomProps) =
           }
 
           const accessToken = tokenResponse.access_token;
-          console.log('accessToken is: ', accessToken);
-
-          // Send access token to your backend to exchange for user info / session
           try {
             const result = await authApi.google(accessToken);
             if(onSuccess) onSuccess(result);

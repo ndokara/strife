@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useCallback, useState } from 'react';
 import {
   Button,
   Dialog,
@@ -7,10 +8,13 @@ import {
   DialogContentText,
   DialogTitle,
   FormControl,
+  FormHelperText,
   InputLabel,
   OutlinedInput
 } from '@mui/material';
 import { userApi } from '@/api/parts/user.ts';
+import { displayNameSchema } from '@/validators/userSchema.ts';
+import axios from 'axios';
 
 interface UpdateDisplayNameProps {
   open: boolean;
@@ -20,16 +24,74 @@ interface UpdateDisplayNameProps {
 
 export default function UpdateDisplayName({ open, onClose, username }: UpdateDisplayNameProps) {
   const [displayName, setDisplayName] = React.useState('');
+  const [displayNameError, setDisplayNameError] = useState(false);
+  const [displayNameErrorMessage, setDisplayNameErrorMessage] = useState('');
+
+  const resetFields = () => {
+    setDisplayName('');
+    setDisplayNameError(false);
+    setDisplayNameErrorMessage('');
+  };
+
+  const handleCloseWithReset = () => {
+    resetFields();
+    onClose();
+  };
+
+  const validateInputs = useCallback((): boolean => {
+    setDisplayNameError(false);
+    setDisplayNameErrorMessage('');
+
+    const validationResult = displayNameSchema.validate({
+      displayName: displayName || null,
+    }, { abortEarly: false });
+
+    if (!validationResult.error) {
+      return true;
+    }
+
+    validationResult.error.details.forEach((detail) => {
+      const field = detail.path[0];
+
+      switch (field) {
+        case 'displayName':
+          setDisplayNameError(true);
+          setDisplayNameErrorMessage(detail.message);
+          break;
+      }
+    });
+    return false;
+  }, [displayName]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLDivElement>): Promise<void> => {
     event.preventDefault();
     event.stopPropagation();
-    if (!displayName) {
-      await userApi.updateDisplayName(username);
-    } else {
-      await userApi.updateDisplayName(displayName);
+
+    if (!validateInputs()) {
+      return;
     }
-    onClose();
+
+    try {
+      if (!displayName) {
+        await userApi.updateDisplayName(username);
+      } else {
+        await userApi.updateDisplayName(displayName);
+      }
+      handleCloseWithReset();
+    } catch (err: unknown) {
+      let errorCode;
+
+      if (axios.isAxiosError(err)) {
+        errorCode = err.response?.data?.error;
+      } else if (err instanceof Error) {
+        errorCode = err.message;
+      }
+      switch (errorCode) {
+        default:
+          setDisplayNameError(true);
+          setDisplayNameErrorMessage('Something went wrong. Please try again.');
+      }
+    }
   };
 
   return (
@@ -55,7 +117,7 @@ export default function UpdateDisplayName({ open, onClose, username }: UpdateDis
           If you do not enter a new display name, your display name will be reverted to your username.
         </DialogContentText>
 
-        <FormControl fullWidth variant="outlined">
+        <FormControl fullWidth variant="outlined" error={displayNameError}>
           <InputLabel>Display name</InputLabel>
           <OutlinedInput
             id="displayName"
@@ -66,6 +128,7 @@ export default function UpdateDisplayName({ open, onClose, username }: UpdateDis
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
+          {displayNameError && <FormHelperText>{displayNameErrorMessage}</FormHelperText>}
         </FormControl>
       </DialogContent>
       <DialogActions sx={{ pb: 3, px: 3 }}>

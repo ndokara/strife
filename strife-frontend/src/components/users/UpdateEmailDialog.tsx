@@ -15,10 +15,12 @@ import {
   Stack,
 } from '@mui/material';
 import { userApi } from '@/api/parts/user.ts';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { twoFAApi } from '@/api/parts/2fa.ts';
 import axios, { AxiosError } from 'axios';
+import { emailSchema } from '@/validators/userSchema.ts';
+import { authApi } from '@/api/parts/auth.ts';
 
 interface ForgotPasswordProps {
   open: boolean;
@@ -66,7 +68,42 @@ export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPas
     onClose();
   };
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateInputs = useCallback((): boolean => {
+    setNewEmailError(false);
+    setNewEmailErrorMessage('');
+
+    const validationResult = emailSchema.validate({
+      email
+    }, { abortEarly: false });
+
+    if(!validationResult.error) {
+      return true;
+    }
+    validationResult.error.details.forEach((detail) =>{
+      const field = detail.path[0];
+
+      switch (field) {
+        case 'email':
+          setNewEmailError(true);
+          setNewEmailErrorMessage(detail.message);
+          break;
+      }
+    });
+    return false;
+  }, [email]);
+
+  async function checkEmailExists(): Promise<boolean> {
+    setNewEmailError(false);
+    setNewEmailErrorMessage('');
+    const {emailExists} = await authApi.checkCredentials(email);
+    if(emailExists){
+      setNewEmailError(true);
+      setNewEmailErrorMessage('An account with this email already exists.');
+      return true;
+    }
+    return false;
+  }
+
 
   const handleGenerateNew2FA = async () => {
     setNewEmailError(false);
@@ -74,11 +111,10 @@ export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPas
     setCodeError(false);
     setError('');
 
-    if (!validateEmail(email)) {
-      setNewEmailError(true);
-      setNewEmailErrorMessage(!email ? 'Please enter your email.' : 'Invalid email format');
+    if(!validateInputs())
       return;
-    }
+    if(await checkEmailExists())
+      return;
 
     try {
       await twoFAApi.verifyTwoFAToken(token);
@@ -104,11 +140,11 @@ export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPas
     event.preventDefault();
     event.stopPropagation();
 
-    if (!validateEmail(email)) {
-      setNewEmailError(true);
-      setNewEmailErrorMessage(!email ? 'Please enter your email.' : 'Invalid email format');
+    if(!validateInputs())
       return;
-    }
+
+    if(await checkEmailExists())
+      return;
 
     if (isTwoFAEnabled && (!tempToken || !newToken)) {
       setNewCodeError(true);
@@ -145,7 +181,7 @@ export default function UpdateEmail({ open, onClose, isTwoFAEnabled }: ForgotPas
     }
   };
 
-  const isContinueDisabled = !validateEmail(email) || (isTwoFAEnabled && !showSetupStep);
+  const isContinueDisabled = (isTwoFAEnabled && !showSetupStep);
 
   return (
     <Dialog

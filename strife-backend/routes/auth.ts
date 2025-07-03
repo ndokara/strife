@@ -138,7 +138,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       const defaultAvatarUrl = `${process.env.S3_ENDPOINT}/avatars/avatar-default.jpg`;
       user = new User({
         email,
-        displayName,
+        displayName: !displayName ? username : displayName,
         username,
         password,
         dateOfBirth,
@@ -229,8 +229,8 @@ router.post('/check-existing-credentials', async (req: Request, res: Response): 
   try {
     const { email, username } = req.body;
     const [emailExists, usernameExists] = await Promise.all([
-      User.exists({ email }).then(Boolean),
-      User.exists({ username }).then(Boolean),
+      email ? User.exists({ email }).then(Boolean) : false,
+      username ? User.exists({ username }).then(Boolean) : false,
     ]);
 
     res.json({ emailExists, usernameExists });
@@ -239,4 +239,5 @@ router.post('/check-existing-credentials', async (req: Request, res: Response): 
     res.status(500).json({ message: 'Something went wrong.' });
   }
 });
+
 export default router;

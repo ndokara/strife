@@ -15,14 +15,19 @@ import CakeIcon from '@mui/icons-material/Cake';
 import { RequiredStar } from './RequiredStar.tsx';
 import { AuthCard } from '@/components/auth/AuthCard.tsx';
 import { authApi } from '@/api/parts/auth.ts';
+import { registerSchema } from '@/validators/userSchema.ts';
 
 function RegisterCard() {
   const [emailError, setEmailError] = React.useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = React.useState('');
   const [usernameError, setUsernameError] = React.useState(false);
   const [usernameErrorMessage, setUsernameErrorMessage] = React.useState('');
+  const [displayNameError, setDisplayNameError] = React.useState(false);
+  const [displayNameErrorMessage, setDisplayNameErrorMessage] = React.useState('');
   const [passwordError, setPasswordError] = React.useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = React.useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = React.useState(false);
+  const [confirmPasswordErrorMessage, setConfirmPasswordErrorMessage] = React.useState('');
   const [dateOfBirthError, setDateOfBirthError] = React.useState(false);
   const [dateOfBirthErrorMessage, setDateOfBirthErrorMessage] = React.useState('');
 
@@ -30,6 +35,7 @@ function RegisterCard() {
   const [displayName, setDisplayName] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
   const defaultDate: Dayjs = dayjs('2000-01-01'); // Ensure this is a valid Dayjs object
   const [dateOfBirth, setDateOfBirth] = useState<Dayjs | null>(defaultDate);
   const navigate = useNavigate();
@@ -51,69 +57,77 @@ function RegisterCard() {
   }, [email, username]);
 
   const validateInputs = useCallback(async (): Promise<boolean> => {
-    let isValid = true;
+    setEmailError(false);
+    setEmailErrorMessage('');
+    setDisplayNameError(false);
+    setDisplayNameErrorMessage('');
+    setUsernameError(false);
+    setUsernameErrorMessage('');
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+    setDateOfBirthError(false);
+    setDateOfBirthErrorMessage('');
+    setConfirmPasswordError(false);
+    setConfirmPasswordErrorMessage('');
 
-    if ((!email.trim() || !/\S+@\S+\.\S+/.test(email))) {
-      setEmailError(true);
-      setEmailErrorMessage('Please enter a valid email address.');
-      isValid = false;
-    } else {
-      setEmailError(false);
-      setEmailErrorMessage('');
+    const validationResult = registerSchema.validate(
+      {
+        email,
+        displayName: displayName || null, // Ensure null is allowed
+        username,
+        password,
+        confirmPassword,
+        dateOfBirth: dateOfBirth?.toDate?.() || null, // Joi expects JS Date
+      },
+      { abortEarly: false }
+    );
+
+    if (!validationResult.error) {
+      return true;
     }
 
-    if ((!username.trim() || username.length < 6)) {
-      setUsernameError(true);
-      setUsernameErrorMessage('Username must be at least 6 characters long.');
-      isValid = false;
-    } else {
-      setUsernameError(false);
-      setUsernameErrorMessage('');
-    }
+    // Mapping Joi errors to state
+    validationResult.error.details.forEach((detail) => {
+      const field = detail.path[0];
 
-    if (!password.trim() || password.length < 6) {
-      setPasswordError(true);
-      setPasswordErrorMessage('Password must be at least 6 characters long.');
-      isValid = false;
-    } else {
-      setPasswordError(false);
-      setPasswordErrorMessage('');
-    }
+      switch (field) {
+        case 'email':
+          setEmailError(true);
+          setEmailErrorMessage(detail.message);
+          break;
+        case 'username':
+          setUsernameError(true);
+          setUsernameErrorMessage(detail.message);
+          break;
+        case 'password':
+          setPasswordError(true);
+          setPasswordErrorMessage(detail.message);
+          break;
+        case 'confirmPassword':
+          setConfirmPasswordError(true);
+          setConfirmPasswordErrorMessage(detail.message);
+          break;
+        case 'dateOfBirth':
+          setDateOfBirthError(true);
+          setDateOfBirthErrorMessage(detail.message);
+          break;
+        case 'displayName':
+          setDisplayNameError(true);
+          setDisplayNameErrorMessage(detail.message);
+      }
+    });
 
-    const today = dayjs();
-    const minAgeDate = today.subtract(13, 'years');
-    const maxDate = today;
-    const minValidDate = today.subtract(100, 'years');
-
-    if (dateOfBirth && dateOfBirth.isSame(defaultDate, 'day')) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('Please select a valid date of birth.');
-      isValid = false;
-    } else if (dateOfBirth && dateOfBirth.isAfter(maxDate)) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('Date of birth cannot be in the future.');
-      isValid = false;
-    } else if (dateOfBirth && dateOfBirth.isAfter(minAgeDate)) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('You must be at least 13 years old.');
-      isValid = false;
-    } else if (dateOfBirth && dateOfBirth.isBefore(minValidDate)) {
-      setDateOfBirthError(true);
-      setDateOfBirthErrorMessage('Please enter a realistic date of birth.');
-      isValid = false;
-    } else {
-      setDateOfBirthError(false);
-      setDateOfBirthErrorMessage('');
-    }
-
-    return isValid;
-  }, [email, username, password, dateOfBirth, defaultDate]);
+    return false;
+  }, [email, displayName, username, password, confirmPassword, dateOfBirth]);
 
 
   const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault();
+    let credentialsExist: boolean = false;
     const valid: boolean = await validateInputs();
-    const credentialsExist: boolean = await checkExistingCredentials();
+    if (valid) {
+      credentialsExist = await checkExistingCredentials();
+    }
     if (valid && !credentialsExist) {
       try {
         const { accessToken } = await authApi.register(email, displayName, username, dateOfBirth, password, undefined, undefined, undefined);
@@ -170,6 +184,8 @@ function RegisterCard() {
         <FormControl>
           <FormLabel>Display name</FormLabel>
           <TextField
+            error={displayNameError}
+            helperText={displayNameErrorMessage}
             id="displayName"
             type="text"
             onChange={(e) => setDisplayName(e.target.value)}
@@ -226,6 +242,30 @@ function RegisterCard() {
             fullWidth
             variant="outlined"
             color={passwordError ? 'error' : 'primary'}
+            slotProps={{
+              input: {
+                autoComplete: 'new-password',
+              },
+            }}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel>
+            Confirm password
+            <RequiredStar/>
+          </FormLabel>
+          <TextField
+            error={confirmPasswordError}
+            helperText={confirmPasswordErrorMessage}
+            name="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoFocus
+            required
+            fullWidth
+            variant="outlined"
+            color={confirmPasswordError ? 'error' : 'primary'}
             slotProps={{
               input: {
                 autoComplete: 'new-password',

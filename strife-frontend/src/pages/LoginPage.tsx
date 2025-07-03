@@ -19,6 +19,7 @@ import { AuthCard } from '@/components/auth/AuthCard.tsx';
 import VerificationCodeInput from '@/components/2fa/VerificationCodeInput.tsx';
 import { isAxiosError } from 'axios';
 import GoogleSignInCustom from '@/components/auth/GoogleSignInCustom.tsx';
+import { loginSchema } from '@/validators/userSchema.ts';
 
 interface LocationState {
   userData: {
@@ -80,29 +81,36 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
   };
 
   const validateInputs = useCallback((): boolean => {
-    let isValid = true;
+    setUsernameError(false);
+    setUsernameErrorMessage('');
+    setPasswordError(false);
+    setPasswordErrorMessage('');
+    setLoginError('');
 
-    if (!username.trim() || username.length < 6) {
-      setUsernameError(true);
-      setUsernameErrorMessage('Username must be at least 6 characters long.');
-      setLoginError('');
-      isValid = false;
-    } else {
-      setUsernameError(false);
-      setUsernameErrorMessage('');
+    const validationResult = loginSchema.validate({
+      username,
+      password
+    }, { abortEarly: false });
+
+    if(!validationResult.error) {
+      return true;
     }
+    validationResult.error.details.forEach((detail) =>{
+      const field = detail.path[0];
 
-    if (!password.trim() || password.length < 6) {
-      setPasswordError(true);
-      setPasswordErrorMessage('Password must be at least 6 characters long.');
-      setLoginError('');
-      isValid = false;
-    } else {
-      setPasswordError(false);
-      setPasswordErrorMessage('');
-    }
+      switch (field) {
+        case 'username':
+          setUsernameError(true);
+          setUsernameErrorMessage(detail.message);
+          break;
+        case 'password':
+          setPasswordError(true);
+          setPasswordErrorMessage(detail.message);
+          break;
+      }
+    });
+    return false;
 
-    return isValid;
   }, [username, password]);
 
   const handleSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -138,7 +146,6 @@ const LoginPage = (props: { disableCustomTheme?: boolean }) => {
 
   const handleSuccess = async (data: any) => {
     try {
-      console.log(data);
       if (data.needsCompletion && data.userData) {
         navigate('/complete-registration', { state: { userData: data.userData } });
       } else if (data.twoFARequired && data.userData) {
