@@ -1,15 +1,16 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { Id } from './common';
 import { RoleModel } from './role';
 import { hasPermission, PermissionValue } from './permissions';
 
-//TODO:I am not sure: should a member reference both guilds and channels (similar to roles)?
+// TODO:I am not sure: should a member reference both guilds and channels (similar to roles)?
 // That would achieve that a user can be a member of a guild but not of every channel of said guild, which makes sense.
 
-export interface IMember extends Document {
-  userId: mongoose.Types.ObjectId;
-  guildId: mongoose.Types.ObjectId;
+export interface IMember extends Document<Id> {
+  userId: Id;
+  guildId: Id;
   nickname?: string;
-  roleIds: mongoose.Types.ObjectId[];
+  roleIds: Id[];
   joinedAt: Date;
   isMuted: boolean;
   muteExpiresAt?: Date;

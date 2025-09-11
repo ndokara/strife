@@ -1,22 +1,24 @@
 import mongoose, { Document, Model, Schema } from 'mongoose';
-import { applyCommonValidations } from './guild';
+import { Id, IHasSlug, IHasTimestamps, ISoftDeletable, validateSlug } from './common';
 
 export type ChannelType = 'text' | 'voice' | 'category';
-export interface IChannel extends Document {
-  guildId: mongoose.Types.ObjectId;
+
+export interface IChannel extends Document<Id>, IHasSlug, IHasTimestamps, ISoftDeletable {
+  guildId: Id;
   name: string;
   slug: string;
   type: ChannelType;
   topic?: string;
-  ownerIds: mongoose.Types.ObjectId[];
+  ownerIds: Id[];
   position: number;
 
   // moderation / UX
   nsfw: boolean;
   rateLimitPerUser?: number; // seconds
   isLocked: boolean;
-  archivedAt?: Date | null;
+  archivedAt: Date | null;
 
+  // TODO: consider a nested object like MediaSettings, mongo does it nicely
   // voice-only
   bitrate?: number;     // kbps
   userLimit?: number;   // 0..99
@@ -29,10 +31,6 @@ export interface IChannel extends Document {
   // activity
   lastMessageAt?: Date;
   lastPinnedAt?: Date;
-
-  // soft delete
-  isDeleted: boolean;
-  deletedAt?: Date;
 }
 
 const ChannelSchema = new Schema<IChannel>(
@@ -66,8 +64,7 @@ const ChannelSchema = new Schema<IChannel>(
     lastMessageAt: { type: Date },
     lastPinnedAt: { type: Date },
 
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date },
+    deletedAt: { type: Date, default: null }, // are you using the mongoose soft-delete plugin?
   },
   { timestamps: true }
 );
@@ -79,7 +76,7 @@ ChannelSchema.index({ guildId: 1, parentId: 1, position: 1 }); // sorting
 ChannelSchema.index({ guildId: 1, type: 1 });
 
 ChannelSchema.pre('validate', function(next) {
-  applyCommonValidations(this, next);
+  validateSlug(this, next);
 });
 
 export const ChannelModel: Model<IChannel> = mongoose.model<IChannel>('Channel', ChannelSchema);

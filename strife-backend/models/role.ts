@@ -1,19 +1,17 @@
-import { Document, model, Schema, Types } from 'mongoose';
+import { Document, model, Schema } from 'mongoose';
+import { Id, IHasTimestamps } from './common';
 
 //TODO: Without creating separate guild channel role schemas:
 // a role should be able to reference guilds and channels. At least one of those is required.
 
-export interface IRole extends Document {
-  guild: Types.ObjectId;          // reference to Guild
+export interface IRole extends Document<Id>, IHasTimestamps {
+  guild: Id;                      // reference to Guild
   name: string;                   // display name
   color?: string;                 // hex color (e.g. "#5865F2")
   hoist: boolean;                 // show separately in member list
   position: number;               // sorting position (higher = more priority)
   permissions: string;            // bitfield integer
   mentionable: boolean;           // can @mention this role
-  createdAt: Date;
-  updatedAt: Date;
-
 }
 
 /*

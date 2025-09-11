@@ -1,22 +1,24 @@
-import mongoose, { HydratedDocument, Model, Schema, Types, } from 'mongoose';
+import mongoose, { Document, Model, Schema, Types } from 'mongoose';
+import { Id, IHasSlug, IHasTimestamps, ISoftDeletable, validateSlug } from './common';
+import { IMember } from './member';
 import { RoleModel } from './role';
 
-export interface IGuild {
+export interface IGuild extends Document<Id>, IHasSlug, IHasTimestamps, ISoftDeletable {
   name: string;
   slug: string; // unique and URL-safe
   iconUrl?: string;
   bannerUrl?: string;
 
-  founderId: Types.ObjectId; // original creator
-  ownerIds: Types.ObjectId[]; // superadmins
+  founderId: Id; // original creator
+  ownerIds: Id[]; // superadmins
 
-  defaultRoleId: Types.ObjectId; // "@everyone"
-  roleOrder?: Types.ObjectId[]; // optional UI ordering only
+  defaultRoleId: Id; // "@everyone"
+  roleOrder?: Id; // optional UI ordering only
 
-  systemChannelId?: Types.ObjectId;
-  rulesChannelId?: Types.ObjectId;
-  publicUpdatesChannelId?: Types.ObjectId;
-  afkChannelId?: Types.ObjectId;
+  systemChannelId?: Id;
+  rulesChannelId?: Id;
+  publicUpdatesChannelId?: Id;
+  afkChannelId?: Id;
   afkTimeoutSec?: number; // 60..3600
 
   settings: {
@@ -35,19 +37,15 @@ export interface IGuild {
     memberCount: number;
     premiumTier?: number;
   };
-
-  isDeleted: boolean;
-  deletedAt?: Date;
 }
 
 export interface GuildMethods {
-  isOwner(userId: Types.ObjectId | string): boolean;
-  canManageGuild(userId: Types.ObjectId | string): boolean;
+  isOwner(userId: Id | string): boolean;
+
+  canManageGuild(userId: Id | string): boolean;
 }
 
-export type GuildDoc = HydratedDocument<IGuild, GuildMethods>;
 export type GuildModel = Model<IGuild, object, GuildMethods>;
-
 
 const GuildSchema = new Schema<IGuild, GuildModel, GuildMethods>(
   {
@@ -82,7 +80,7 @@ const GuildSchema = new Schema<IGuild, GuildModel, GuildMethods>(
     iconUrl: { type: String },
     bannerUrl: { type: String },
 
-    founderId: { type: Schema.Types.ObjectId, ref: 'User', required: true},
+    founderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     ownerIds: [{ type: Schema.Types.ObjectId, ref: 'User', index: true }],
 
     defaultRoleId: {
@@ -129,14 +127,14 @@ const GuildSchema = new Schema<IGuild, GuildModel, GuildMethods>(
       premiumTier: { type: Number, default: 0 },
     },
 
-    isDeleted: { type: Boolean, default: false },
-    deletedAt: { type: Date },
+    deletedAt: { type: Date, default: null },
   },
   {
     timestamps: true,
     versionKey: false,
   }
 );
+
 // index
 GuildSchema.index({ name: 'text' });
 
@@ -149,26 +147,14 @@ export function slugify(input: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
 }
-//pre
 
-export function applyCommonValidations(doc: any, next: (err?: any) => void) {
-  if (!doc.slug && doc.name) {
-    const base = slugify(doc.name);
-    doc.slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
-  }
-
-  if (doc.isDeleted && !doc.deletedAt) {
-    doc.deletedAt = new Date();
-  }
-
-  next();
-}
+// pre
 
 GuildSchema.pre('validate', function(next) {
-  return applyCommonValidations(this, next);
+  return validateSlug(this, next);
 });
 
-//post
+// post
 GuildSchema.post('save', async function(guild, next) {
   try {
     // Ensuring founder is in ownerIds
@@ -188,7 +174,7 @@ GuildSchema.post('save', async function(guild, next) {
         permissions: '0',
       });
 
-      guild.defaultRoleId = <Types.ObjectId>role._id;
+      guild.defaultRoleId = role._id;
       await guild.save();
     }
 
@@ -205,9 +191,7 @@ GuildSchema.methods.isOwner = function(userId: Types.ObjectId | string) {
   return this.ownerIds?.some((oid) => String(oid) === idStr) ?? false;
 };
 
-GuildSchema.methods.canManageGuild = function(
-  userId: Types.ObjectId | string
-) {
+GuildSchema.methods.canManageGuild = function(userId: Types.ObjectId | string) {
   return this.isOwner(userId);
 };
 

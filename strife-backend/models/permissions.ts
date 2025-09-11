@@ -103,6 +103,6 @@ export function togglePermission(
 export function listPermissions(permissions: string | bigint): string[] {
   const perms = normalize(permissions);
   return Object.entries(Permission)
-    .filter(([key, value]) => typeof value === 'bigint' && (perms & (value as bigint)) !== 0n)
+    .filter(([, value]) => typeof value === 'bigint' && (perms & (value as bigint)) !== 0n)
     .map(([key]) => key);
 }
