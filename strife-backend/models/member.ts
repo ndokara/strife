@@ -1,49 +1,76 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { Id } from './common';
 import { RoleModel } from './role';
-import { hasPermission, PermissionValue } from './permissions';
-
-// TODO:I am not sure: should a member reference both guilds and channels (similar to roles)?
-// That would achieve that a user can be a member of a guild but not of every channel of said guild, which makes sense.
+import { PermissionValue } from './permissions';
 
 export interface IMember extends Document<Id> {
   userId: Id;
-  guildId: Id;
+  parent: {
+    kind: 'Guild' | 'Channel';
+    id: Id;                     // reference to guild or channel
+  };
   nickname?: string;
-  roleIds: Id[];
+  roles: Id[];
   joinedAt: Date;
-  isMuted: boolean;
-  muteExpiresAt?: Date;
-  isBanned: boolean;
-  banReason?: string;
-  presence?: {
+
+  moderation: {
+    mute: {
+      isMuted: boolean;
+      expiresAt?: Date;
+    };
+    ban: {
+      isBanned: boolean;
+      reason?: string;
+    };
+  };
+
+  presence: {
     status: 'online' | 'idle' | 'dnd' | 'offline';
     customStatus?: string;
+    lastActiveAt: Date;
   };
-  lastActiveAt: Date;
+
+  /*
+  TODO: I intend to keep more data here like personal member settings per guild/channel, etc.
+  maybe: if channel members and guild members end up needing different fields, I should separate them
+   */
+
   getPermissionMask(): Promise<bigint>;
   hasPermission(perm: PermissionValue): Promise<boolean>;
 }
 
 const MemberSchema = new Schema<IMember>({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  guildId: { type: Schema.Types.ObjectId, ref: 'Guild', required: true },
+
+  parent: {
+    kind: {
+      type: String,
+      enum: ['Guild', 'Channel'],
+      required: true,
+    },
+    id: {
+      type: Schema.Types.ObjectId,
+      required: true,
+    },
+  },
+
   nickname: { type: String },
-  roleIds: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
-  /*
-  TODO: maybe: additional mask for other permissions:
-  so one could give a member certain custom permissions without
-  creating and using a role to achieve that
-  ; if that is not dumb
-   */
+
+  roles: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
+
   joinedAt: { type: Date, default: Date.now },
-  isMuted: { type: Boolean, default: false },
-  muteExpiresAt: { type: Date },
 
-  isBanned: { type: Boolean, default: false },
-  banReason: { type: String },
+  moderation: {
+    mute: {
+      isMuted: { type: Boolean, default: false },
+      expiresAt: { type: Date },
+    },
+    ban: {
+      isBanned: { type: Boolean, default: false },
+      reason: { type: String },
+    },
+  },
 
-  // presence/activity tracking
   presence: {
     status: {
       type: String,
@@ -51,14 +78,13 @@ const MemberSchema = new Schema<IMember>({
       default: 'offline',
     },
     customStatus: { type: String, maxlength: 100 },
+    lastActiveAt: { type: Date, default: Date.now },
   },
-
-  lastActiveAt: { type: Date, default: Date.now },
 });
 
 // Methods
 MemberSchema.methods.getPermissionMask = async function(): Promise<bigint> {
-  const roles = await RoleModel.find({ _id: { $in: this.roleIds } });
+  const roles = await RoleModel.find({ _id: { $in: this.roles } });
   let mask = 0n;
   for (const role of roles) {
     mask |= BigInt(role.permissions);
@@ -68,7 +94,7 @@ MemberSchema.methods.getPermissionMask = async function(): Promise<bigint> {
 
 MemberSchema.methods.hasPermission = async function(perm: PermissionValue): Promise<boolean> {
   const mask = await this.getPermissionMask();
-  return hasPermission(mask, perm);
+  return (mask & perm) === perm;
 };
 
 export const MemberModel = mongoose.model<IMember>('Member', MemberSchema);

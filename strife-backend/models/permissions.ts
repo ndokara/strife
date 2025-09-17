@@ -70,39 +70,3 @@ export type PermissionValue = typeof Permission[PermissionKey]; // bigint
 export function normalize(permissions: string | bigint): bigint {
   return typeof permissions === 'string' ? BigInt(permissions) : permissions;
 }
-
-export function addPermission(
-  permissions: string | bigint,
-  perm: PermissionValue
-): bigint {
-  return normalize(permissions) | perm;
-}
-
-export function removePermission(
-  permissions: string | bigint,
-  perm: PermissionValue
-): bigint {
-  return normalize(permissions) & ~perm;
-}
-
-export function hasPermission(
-  permissions: string | bigint,
-  perm: PermissionValue
-): boolean {
-  return (normalize(permissions) & perm) === perm;
-}
-
-export function togglePermission(
-  permissions: string | bigint,
-  perm: PermissionValue
-): bigint {
-  return normalize(permissions) ^ perm;
-}
-
-// Convert permissions bigint to an array of Permission names
-export function listPermissions(permissions: string | bigint): string[] {
-  const perms = normalize(permissions);
-  return Object.entries(Permission)
-    .filter(([, value]) => typeof value === 'bigint' && (perms & (value as bigint)) !== 0n)
-    .map(([key]) => key);
-}

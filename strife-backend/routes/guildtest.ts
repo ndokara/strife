@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { Guild } from '../models/guild';
 import { RoleModel } from '../models/role';
 import { MemberModel } from '../models/member';
-import { addPermission, listPermissions, Permission } from '../models/permissions';
+import { Permission } from '../models/permissions';
 import { ChannelModel } from '../models/channel';
 
 // most bare-bones routes so I can test out creations
@@ -14,14 +14,32 @@ router.post('/guild', async (req, res) => {
   try {
     const {founderId} = req.body;
     const guild = await Guild.create({
-      name: 'Test Guild',
+      name: 'Deleted Test Guild',
       // slug: 'test-guild',
       founderId:founderId,
+      deletedAt: Date.now(),
     });
 
     res.json(guild);
   } catch (err) {
     res.status(500).json({ error: err });
+  }
+});
+
+router.get('/guilds', async (req, res) => {
+  try {
+    const guilds = await Guild.find(); // returns only not-deleted by default
+
+    res.json({
+      success: true,
+      data: guilds,
+    });
+  } catch (err) {
+    console.error('Error fetching guilds:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch guilds',
+    });
   }
 });
 
@@ -84,8 +102,8 @@ router.post('/permission', async (req, res): Promise<any> => {
       return res.status(400).json({ error: 'roleId is required' });
     }
     const role = await RoleModel.findById(roleId);
-    role!.permissions = addPermission(role!.permissions, Permission.SEND_MESSAGES).toString();
-    role!.permissions = addPermission(role!.permissions, Permission.MUTE_MEMBERS).toString();
+    role!.addPermission(Permission.SEND_MESSAGES);
+    role!.addPermission(Permission.MUTE_MEMBERS);
     role!.save();
     res.json(role);
   } catch (err) {
@@ -99,7 +117,7 @@ router.post('/check-permission', async (req, res): Promise<any> => {
     return res.status(400).json({ error: 'roleId is required' });
   }
   const role = await RoleModel.findById(roleId);
-  res.json(listPermissions(role!.permissions));
+  res.json(role!.listPermissions());
 });
 
 router.post('/channel', async (req, res): Promise<any> => {
