@@ -1,13 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { Id } from './common';
-import { RoleModel } from './role';
+import { Role } from './role';
 import { PermissionValue } from './permissions';
 
 export interface IMember extends Document<Id> {
   userId: Id;
   parent: {
     kind: 'Guild' | 'Channel';
-    id: Id;                     // reference to guild or channel
+    id: Id;
   };
   nickname?: string;
   roles: Id[];
@@ -30,12 +30,10 @@ export interface IMember extends Document<Id> {
     lastActiveAt: Date;
   };
 
-  /*
-  TODO: I intend to keep more data here like personal member settings per guild/channel, etc.
-  maybe: if channel members and guild members end up needing different fields, I should separate them
-   */
+  // TODO: I intend to keep more data here like personal member settings per guild/channel, etc.
 
   getPermissionMask(): Promise<bigint>;
+
   hasPermission(perm: PermissionValue): Promise<boolean>;
 }
 
@@ -84,7 +82,7 @@ const MemberSchema = new Schema<IMember>({
 
 // Methods
 MemberSchema.methods.getPermissionMask = async function(): Promise<bigint> {
-  const roles = await RoleModel.find({ _id: { $in: this.roles } });
+  const roles = await Role.find({ _id: { $in: this.roles } });
   let mask = 0n;
   for (const role of roles) {
     mask |= BigInt(role.permissions);
@@ -97,4 +95,4 @@ MemberSchema.methods.hasPermission = async function(perm: PermissionValue): Prom
   return (mask & perm) === perm;
 };
 
-export const MemberModel = mongoose.model<IMember>('Member', MemberSchema);
+export const Member = mongoose.model<IMember>('Member', MemberSchema);

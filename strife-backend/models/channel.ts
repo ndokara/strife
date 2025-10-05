@@ -1,13 +1,13 @@
 import mongoose, { Document, Model, Schema, Types } from 'mongoose';
 import {
-  ensureDefaultState,
   Id,
   IHasOwnership,
   IHasRoles,
   IHasSlug,
   IHasTimestamps,
   IMemberSummary,
-  ISoftDeletable, isOwner,
+  ISoftDeletable,
+  isOwner,
   validateSlug
 } from './common';
 import { softDeletePlugin, SoftDeleteQueryHelpers } from '../plugins/softDeletePlugin';
@@ -20,8 +20,7 @@ export interface IChannel extends Document<Id>,
   IHasTimestamps,
   ISoftDeletable,
   IHasOwnership,
-  IHasRoles
-{
+  IHasRoles {
   guildId: Id;
   name: string;
   slug: string;
@@ -56,7 +55,6 @@ export interface IChannel extends Document<Id>,
 
   syncPermissionsWithParent: boolean;
 
-  // lightweight embedded members (summary info only)
   members: IMemberSummary[];
 
   activity: {
@@ -64,6 +62,7 @@ export interface IChannel extends Document<Id>,
     lastPinnedAt?: Date;
   };
 }
+
 export interface ChannelMethods {
   isOwner(userId: Id | string): boolean;
   canManageChannel(userId: Id | string): Promise<boolean>;
@@ -84,9 +83,15 @@ const ChannelSchema = new Schema<IChannel, ChannelModel>(
     },
     type: { type: String, enum: ['text', 'voice', 'category'], required: true },
     topic: { type: String, maxlength: 1024 },
+
     ownership: {
       founderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
       ownerIds: [{ type: Schema.Types.ObjectId, ref: 'User', index: true }],
+    },
+
+    roles: {
+      defaultRoleId: { type: Schema.Types.ObjectId, ref: 'Role' },
+      order: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
     },
 
     position: { type: Number, default: 0 },
@@ -99,7 +104,7 @@ const ChannelSchema = new Schema<IChannel, ChannelModel>(
     },
 
     mediaSettings: {
-      bitrate: { type: Number, min: 8, max: 384 },
+      bitrate: { type: Number, min: 8, max: 64000 },
       userLimit: { type: Number, min: 0, max: 99, default: 0 },
       rtcRegion: { type: String, default: null },
       videoQualityMode: { type: String, enum: ['auto', 'full'], default: 'auto' },
@@ -135,20 +140,10 @@ ChannelSchema.index({ guildId: 1, slug: 1 }, { unique: true });
 ChannelSchema.index({ guildId: 1, parentId: 1, position: 1 }); // sorting
 ChannelSchema.index({ guildId: 1, type: 1 });
 
-ChannelSchema.pre('validate', function(next) {
-  validateSlug(this, next);
+ChannelSchema.pre('validate', async function(next) {
+  await validateSlug(this, next);
 });
 
-ChannelSchema.post('save', async function(channel: Document, next) {
-  try {
-    await ensureDefaultState(channel);
-    next();
-  } catch (err) {
-    next(err as Error);
-  }
-});
-
-//methods
 ChannelSchema.methods.isOwner = function(userId: Types.ObjectId | string): boolean {
   return isOwner(this, userId);
 };
@@ -180,4 +175,4 @@ ChannelSchema.methods.canManageChannel = async function(userId: Types.ObjectId |
 
 ChannelSchema.plugin(softDeletePlugin);
 
-export const ChannelModel: Model<IChannel> = mongoose.model<IChannel>('Channel', ChannelSchema);
+export const Channel: Model<IChannel> = mongoose.model<IChannel>('Channel', ChannelSchema);

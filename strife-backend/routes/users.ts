@@ -22,7 +22,7 @@ router.get('/profile', verifyToken, async (req: Request, res: Response, next: Ne
 });
 
 router.post('/avatar', verifyToken, uploadAvatar.single('avatar'),
-  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     try {
       if (!req.file) {
         res.status(400).json({ message: 'No file uploaded.' });
@@ -58,7 +58,7 @@ router.delete('/avatar', verifyToken, async (req: Request, res: Response, next: 
   }
 });
 
-router.put('/google-avatar', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/google-avatar', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = await User.findById(req.user!.id);
     if (!user || !user.googleAccessToken) {
@@ -106,7 +106,7 @@ router.put('/google-avatar', verifyToken, async (req: Request, res: Response, ne
   }
 });
 
-router.put('/display-name', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/display-name', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { displayName } = req.body;
     await User.findByIdAndUpdate(req.user!.id, { displayName });
@@ -134,7 +134,7 @@ router.put('/email', verifyToken, async (req: Request, res: Response, next: Next
     res.status(500).json({ message: 'Something went wrong.' });return next(err);
   }
 });
-router.put('/date-of-birth', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/date-of-birth', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { dateOfBirth } = req.body;
     await User.findByIdAndUpdate(req.user!.id, { dateOfBirth });
@@ -179,7 +179,7 @@ router.put('/username', verifyToken, async (req: Request, res: Response): Promis
   }
 });
 
-router.put('/password', verifyToken, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/password', verifyToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user: IUser | null = await User.findById(req.user!.id);

@@ -1,13 +1,13 @@
 import mongoose, { Document, Model, Schema, Types } from 'mongoose';
 import {
-  ensureDefaultState,
   Id,
   IHasOwnership,
   IHasRoles,
   IHasSlug,
   IHasTimestamps,
   IMemberSummary,
-  ISoftDeletable, isOwner,
+  ISoftDeletable,
+  isOwner,
   validateSlug
 } from './common';
 import { softDeletePlugin, SoftDeleteQueryHelpers } from '../plugins/softDeletePlugin';
@@ -18,8 +18,7 @@ export interface IGuild
     IHasTimestamps,
     ISoftDeletable,
     IHasOwnership,
-    IHasRoles
-{
+    IHasRoles {
   name: string;
   slug: string;
 
@@ -54,7 +53,6 @@ export interface IGuild
     community: boolean;
     locale: string;
   };
-  // lightweight embedded members (summary info only)
   members: IMemberSummary[];
 
   stats?: {
@@ -101,13 +99,14 @@ const GuildSchema = new Schema<IGuild, GuildModel, GuildMethods>(
       match: /^[a-z0-9]+(?:-[a-z0-9]+)*$/, // kebab-case
     },
 
+    //TODO: add these two default images in minio
     media: {
-      iconUrl: { type: String },
-      bannerUrl: { type: String },
+      iconUrl: { type: String, default: null },
+      bannerUrl: { type: String, default: null },
     },
 
     ownership: {
-      founderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+      founderId: { type: Schema.Types.ObjectId, ref: 'User' },
       ownerIds: [{ type: Schema.Types.ObjectId, ref: 'User', index: true }],
     },
 
@@ -174,10 +173,8 @@ const GuildSchema = new Schema<IGuild, GuildModel, GuildMethods>(
   }
 );
 
-// index
 GuildSchema.index({ name: 'text' });
 
-// hook
 export function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -187,22 +184,10 @@ export function slugify(input: string): string {
     .replace(/-+/g, '-');
 }
 
-// pre
 GuildSchema.pre('validate', function(next) {
   return validateSlug(this, next);
 });
 
-// post
-GuildSchema.post('save', async function(guild: Document, next) {
-  try {
-    await ensureDefaultState(guild);
-    next();
-  } catch (err) {
-    next(err as Error);
-  }
-});
-
-// methods
 GuildSchema.methods.isOwner = function(userId: Types.ObjectId | string): boolean {
   return isOwner(this, userId);
 };

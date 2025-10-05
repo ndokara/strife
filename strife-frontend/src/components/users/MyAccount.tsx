@@ -132,11 +132,11 @@ const MyAccount: React.FC = () => {
   };
   const handleRemoveAvatar = async () => {
     await userApi.removeAvatar();
-    fetchProfile();
+    await fetchProfile();
   };
   const handleGoogleAvatar = async () => {
     await userApi.googleAvatar();
-    fetchProfile();
+    await fetchProfile();
   };
 
   if (error) {

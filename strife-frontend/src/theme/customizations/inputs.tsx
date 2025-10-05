@@ -325,7 +325,7 @@ export const inputsCustomizations: Components<CustomTheme> = {
       }),
     },
   },
-  //* I can delete this if i want colored autocompleted input fields.
+  //* I can delete this if I want colored autocompleted input fields.
   MuiOutlinedInput: {
     styleOverrides: {
       input: ({ theme }) => ({

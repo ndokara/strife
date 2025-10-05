@@ -2,7 +2,7 @@ import { Document, model, Schema } from 'mongoose';
 import { Id, IHasTimestamps } from './common';
 import { normalize, Permission, PermissionValue } from './permissions';
 
-export interface IRole extends Document<Id>, IHasTimestamps {
+export interface IRole extends Document, IHasTimestamps {
   parent: {
     kind: 'Guild' | 'Channel';
     id: Id;
@@ -16,7 +16,6 @@ export interface IRole extends Document<Id>, IHasTimestamps {
   permissions: string; // stored as string
   mentionable: boolean;
 
-  // Instance methods
   addPermission(perm: PermissionValue): void;
   removePermission(perm: PermissionValue): void;
   hasPermission(perm: PermissionValue): boolean;
@@ -25,7 +24,7 @@ export interface IRole extends Document<Id>, IHasTimestamps {
 }
 
 
-const RoleSchema = new Schema<IRole>({
+const RoleSchema: Schema<IRole> = new Schema<IRole>({
   parent: {
     kind: { type: String, enum: ['Guild', 'Channel'], required: true },
     id: { type: Schema.Types.ObjectId, required: true }
@@ -40,7 +39,6 @@ const RoleSchema = new Schema<IRole>({
   mentionable: { type: Boolean, default: false }
 });
 
-// Instance methods
 RoleSchema.methods.addPermission = function(perm: bigint) {
   this.permissions = (normalize(this.permissions) | perm).toString();
 };
@@ -64,4 +62,4 @@ RoleSchema.methods.listPermissions = function(): string[] {
     .map(([key]) => key);
 };
 
-export const RoleModel = model<IRole>('Role', RoleSchema);
+export const Role = model<IRole>('Role', RoleSchema);

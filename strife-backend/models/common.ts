@@ -1,6 +1,5 @@
 import mongoose, { CallbackError, Types } from 'mongoose';
-import { slugify } from './guild';
-import { RoleModel } from './role';
+import { Guild, slugify } from './guild';
 
 export type Id = mongoose.Types.ObjectId;
 
@@ -8,6 +7,7 @@ export interface IHasSlug {
   name: string;
   slug: string;
 }
+
 export interface IMemberSummary {
   userId: Id;
   roles: Id[];
@@ -23,55 +23,47 @@ export interface IHasTimestamps {
 export interface ISoftDeletable {
   deletedAt: Date | null;
 }
+
 export interface IHasOwnership {
   ownership: {
     founderId: Id;
     ownerIds: Id[];
   };
 }
-export interface IHasRoles{
+
+export interface IHasRoles {
   roles: {
     defaultRoleId: Id;
     order: Id[];
   };
 }
-export function validateSlug(doc: IHasSlug, next: (err?: CallbackError) => void) {
-  if (!doc.slug && doc.name) {
-    const base = slugify(doc.name);
-    doc.slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
-  }
-  next();
-}
 
-export async function ensureDefaultState(doc: unknown): Promise<void> {
-  const typedDoc = doc as Document & IHasOwnership & IHasRoles & {
-    _id: Types.ObjectId;
-    save: () => Promise<unknown>;
-  };
+export async function validateSlug(
+  doc: IHasSlug,
+  next: (err?: CallbackError) => void
+): Promise<void> {
+  try {
+    if (doc.name) {
+      const base = doc.slug ? doc.slug : slugify(doc.name);
 
-  const owners = typedDoc.ownership.ownerIds;
-  if (!owners || owners.length === 0) {
-    typedDoc.ownership.ownerIds = [typedDoc.ownership.founderId];
-    await typedDoc.save();
-  } else if (!owners.some(id => id.equals(typedDoc.ownership.founderId))) {
-    owners.push(typedDoc.ownership.founderId);
-    await typedDoc.save();
-  }
+      let slug = base;
+      let counter = 1;
 
-  // Ensure @everyone role exists
-  if (typedDoc.roles && !typedDoc.roles.defaultRoleId) {
-    const role = await RoleModel.create({
-      guild: typedDoc._id,
-      name: '@everyone',
-      permissions: '0',
-    });
+      while (await Guild.exists({ slug })) {
+        slug = `${base}-${counter++}`;
+      }
 
-    typedDoc.roles.defaultRoleId = role._id;
-    await typedDoc.save();
+      doc.slug = slug;
+    }
+
+    next();
+  } catch (err) {
+    next(err as CallbackError);
   }
 }
-export function isOwner(doc:unknown , userId: Types.ObjectId | string): boolean {
+
+export function isOwner(doc: unknown, userId: Types.ObjectId | string): boolean {
   const typedDoc = doc as Document & IHasOwnership & IHasRoles;
-  if(String(typedDoc.ownership.founderId) === String(userId)) return true;
+  if (String(typedDoc.ownership.founderId) === String(userId)) return true;
   return typedDoc.ownership.ownerIds?.some((oid) => String(oid) === String(userId)) ?? false;
 }
